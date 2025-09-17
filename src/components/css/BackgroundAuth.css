@@ -1,0 +1,26 @@
+.cloud {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.3;
+  filter: blur(8px);
+}
+
+.cloud1 {
+  width: 250px;
+  height: 80px;
+  top: 10%;
+}
+
+.cloud2 {
+  width: 350px;
+  height: 120px;
+  top: 50%;
+}
+
+.cloud3 {
+  width: 200px;
+  height: 70px;
+  top: 80%;
+  left: 20%;
+}
