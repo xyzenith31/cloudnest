@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiLayout, FiUsers, FiFolder, FiMessageSquare,
   FiActivity, FiHelpCircle, FiLogOut, FiChevronLeft, FiChevronRight
-} from 'react-icons/lib/fi'; // Jalur impor diperbaiki
-import { FaCloud } from 'react-icons/lib/fa'; // Jalur impor diperbaiki
+} from 'react-icons/fi'; // Corrected import path
+import { FaCloud } from 'react-icons/fa'; // Corrected import path
 
 // Komponen untuk setiap item di sidebar
 const SidebarItem = ({ icon: Icon, text, to, isExpanded }) => {
