@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiUser, FiMail, FiPhone, FiLock, FiSmile, FiEdit } from 'react-icons/fi';
 
-import AuthLayout from '../layouts/AuthLayout';
 import Card from '../components/Card';
 import { CloudNestLogo } from '../components/Icons';
 import CustomSelect from '../components/CustomSelect';
@@ -75,7 +74,7 @@ const RegisterPage = () => {
   }
 
   return (
-    <AuthLayout>
+    <>
       <Notification
         message={notification.message}
         type={notification.type}
@@ -126,10 +125,10 @@ const RegisterPage = () => {
             top:.875rem;
             left:1rem;
             color:#9CA3AF;
-            z-index: 10; /* <-- PENAMBAHAN KRUSIAL DI SINI */
+            z-index: 10; 
         }
       `}</style>
-    </AuthLayout>
+    </>
   );
 };
 

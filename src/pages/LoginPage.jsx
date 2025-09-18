@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiUser, FiLock } from 'react-icons/fi';
 
-import AuthLayout from '../layouts/AuthLayout';
 import Card from '../components/Card';
 import { CloudNestLogo } from '../components/Icons';
 import Notification from '../components/Notification';
@@ -48,7 +47,7 @@ const LoginPage = () => {
   };
 
   return (
-    <AuthLayout>
+    <>
       <Notification
         message={notification.message}
         type={notification.type}
@@ -82,7 +81,7 @@ const LoginPage = () => {
           </p>
         </Card>
       </div>
-    </AuthLayout>
+    </>
   );
 };
 

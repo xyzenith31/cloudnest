@@ -5,7 +5,8 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import UserDashboard from './pages/users/UserDashboard.jsx';
 import AdminLayout from './layouts/AdminLayout.jsx';
-import UserLayout from './layouts/UserLayout.jsx'; 
+import UserLayout from './layouts/UserLayout.jsx';
+import AuthLayout from './layouts/AuthLayout.jsx';
 
 // Placeholder components for other admin pages
 const ManageUsers = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Manajemen Pengguna</h1></div>;
@@ -26,9 +27,11 @@ const UserProfilePage = () => <div className="p-4"><h1 className="text-2xl font-
 function App() {
   return (
     <Routes>
-      {/* Rute untuk otentikasi (tanpa layout) */}
-      <Route path="/" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      {/* Grup rute untuk otentikasi menggunakan AuthLayout */}
+      <Route element={<AuthLayout />}>
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+      </Route>
 
       {/* Grup rute untuk Pengguna Biasa menggunakan UserLayout */}
       <Route element={<UserLayout />}>

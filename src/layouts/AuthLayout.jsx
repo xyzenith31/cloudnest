@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Outlet } from 'react-router-dom';
 import BackgroundAuth from '../components/BackgroundAuth';
 
 // Fungsi untuk menentukan waktu (pagi, sore, malam)
@@ -22,7 +23,7 @@ const getGradientClass = (time) => {
   }
 };
 
-const AuthLayout = ({ children }) => {
+const AuthLayout = () => {
   const [timeOfDay, setTimeOfDay] = useState(getTimeOfDay());
 
   // Cek waktu setiap menit, jika diperlukan
@@ -42,7 +43,7 @@ const AuthLayout = ({ children }) => {
     <div className={`relative min-h-screen w-full bg-gradient-to-br ${gradientClass} flex items-center justify-center p-4 overflow-hidden transition-colors duration-1000`}>
       <BackgroundAuth timeOfDay={timeOfDay} />
       <main className="relative z-10 w-full">
-        {children}
+        <Outlet />
       </main>
     </div>
   );

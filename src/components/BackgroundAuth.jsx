@@ -6,7 +6,6 @@ import React from 'react';
 
   // === KOMPONEN AWAN ===
   const Cloud = ({ i, cloudClass }) => {
-    // ... (Kode Cloud tidak berubah, biarkan seperti sebelumnya)
     const variants = {
       initial: {
         x: '-250px',
@@ -21,7 +20,7 @@ import React from 'react';
           repeat: Infinity,
           repeatType: 'loop',
           ease: 'linear',
-          delay: i * 1.2,
+          delay: -random(0, 25), // [DIUBAH] Delay negatif agar awan langsung muncul
         },
       },
     };
@@ -38,7 +37,6 @@ import React from 'react';
 
   // === KOMPONEN BINTANG ===
   const Star = ({ delay }) => (
-      // ... (Kode Star tidak berubah, biarkan seperti sebelumnya)
     <motion.div
       className="star"
       style={{ top: `${random(0, 95)}%`, left: `${random(0, 95)}%`, scale: random(0.5, 1.2) }}
@@ -107,4 +105,4 @@ import React from 'react';
     );
   };
 
-  export default BackgroundAuth;  
+  export default BackgroundAuth;
