@@ -1,0 +1,91 @@
+.notification-dropdown-new {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 380px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+  font-family: 'Poppins', sans-serif;
+}
+
+.dropdown-header-new {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.dropdown-header-new h3 {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.mark-as-read {
+  font-size: 0.875rem;
+  color: #3b82f6;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.notification-list-new {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notification-item-new {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  transition: background-color 0.2s;
+}
+
+.notification-item-new:hover {
+  background-color: #f9fafb;
+}
+
+.notification-item-new .icon {
+  width: 24px;
+  height: 24px;
+  padding: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.icon.file { background-color: #e0e7ff; color: #4f46e5; }
+.icon.comment { background-color: #d1fae5; color: #059669; }
+.icon.storage { background-color: #fee2e2; color: #dc2626; }
+
+.notification-content p {
+  font-size: 0.9rem;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.notification-content span {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.dropdown-footer-new {
+    padding: 1rem;
+    text-align: center;
+    border-top: 1px solid #f0f0f0;
+    background-color: #f9fafb;
+}
+
+.dropdown-footer-new a {
+    color: #3b82f6;
+    font-weight: 500;
+    text-decoration: none;
+}

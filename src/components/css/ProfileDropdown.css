@@ -1,0 +1,56 @@
+.profile-dropdown-new {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 240px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+  font-family: 'Poppins', sans-serif;
+}
+
+.profile-header-new {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.profile-header-new p:first-child {
+  font-weight: 600;
+  color: #111827;
+}
+
+.profile-header-new p:last-child {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.profile-links-new {
+  padding: 0.5rem;
+}
+
+.profile-item-new {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #374151;
+  transition: background-color 0.2s;
+  font-weight: 500;
+}
+
+.profile-item-new:hover {
+  background-color: #f3f4f6;
+}
+
+.profile-item-new.logout {
+  color: #dc2626;
+}
+
+.profile-item-new.logout:hover {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
