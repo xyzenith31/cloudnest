@@ -2,7 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
     FiUsers, FiFileText, FiHardDrive, FiActivity, FiArrowUp, FiArrowDown, 
-    FiFolder, FiClock, FiUploadCloud, FiServer, FiDatabase, FiShield, FiCheckCircle, FiAlertTriangle 
+    FiFolder, FiClock, FiUploadCloud, FiServer, FiDatabase, FiShield,
+    FiShare2, FiCloud, FiMail, FiRefreshCw // [BARU] Menambahkan ikon baru
 } from 'react-icons/fi';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -39,19 +40,24 @@ const recentUsers = [
     { name: 'Rizky Pratama', email: 'rizky.p@example.com', time: '2 jam lalu' },
     { name: 'Dewi Lestari', email: 'dewi.l@example.com', time: '5 jam lalu' },
 ];
+// [DIPERBARUI] Menambahkan 4 status sistem baru
 const systemStatus = [
     { name: 'Server Utama', status: 'Operational', icon: FiServer, color: 'green' },
     { name: 'Database', status: 'Operational', icon: FiDatabase, color: 'green' },
     { name: 'Server Upload', status: 'Latency Tinggi', icon: FiUploadCloud, color: 'orange' },
     { name: 'Autentikasi', status: 'Operational', icon: FiShield, color: 'green' },
+    { name: 'API Gateway', status: 'Operational', icon: FiShare2, color: 'green' },
+    { name: 'CDN Service', status: 'Operational', icon: FiCloud, color: 'green' },
+    { name: 'Email Service', status: 'Maintenance', icon: FiMail, color: 'orange' },
+    { name: 'Backup System', status: 'Operational', icon: FiRefreshCw, color: 'green' },
 ];
 
-// Komponen Card Statistik yang sudah diperbaiki
+// Komponen Card Statistik
 const StatCard = ({ icon: Icon, label, value, growth, color }) => {
     const isPositive = growth >= 0;
     return (
       <motion.div
-        whileHover={{ scale: 1.05, y: -5 }} // <<-- PERBAIKAN ERROR HOVER ADA DI SINI
+        whileHover={{ scale: 1.05, y: -5 }}
         transition={{ type: 'spring', stiffness: 300 }}
         className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm flex items-center space-x-3"
       >
@@ -82,7 +88,7 @@ const AdminBeranda = () => {
                 <p className="text-gray-500 mt-1">Selamat datang di pusat kendali CloudNest.</p>
             </motion.div>
             
-            <motion.div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-5" variants={containerVariants} initial="hidden" animate="visible">
+            <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" variants={containerVariants} initial="hidden" animate="visible">
                 {stats.map((stat, index) => <motion.div key={index} variants={itemVariants}><StatCard {...stat} /></motion.div>)}
             </motion.div>
 
@@ -112,11 +118,12 @@ const AdminBeranda = () => {
                     </motion.div>
                     <motion.div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm" variants={itemVariants}>
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Status Sistem</h3>
+                        {/* [DIRAPIKAN] Mengubah layout grid agar muat 8 item */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {systemStatus.map(sys => (
                                 <div key={sys.name} className="flex flex-col items-center p-4 bg-gray-50 rounded-lg">
                                     <sys.icon className={`w-8 h-8 ${sys.color === 'green' ? 'text-green-500' : 'text-orange-500'}`} />
-                                    <p className="text-sm font-semibold mt-2 text-gray-700">{sys.name}</p>
+                                    <p className="text-sm font-semibold mt-2 text-gray-700 text-center">{sys.name}</p>
                                     <p className={`text-xs font-bold ${sys.color === 'green' ? 'text-green-600' : 'text-orange-500'}`}>{sys.status}</p>
                                 </div>
                             ))}
@@ -153,6 +160,24 @@ const AdminBeranda = () => {
                                         <p className="text-xs text-gray-500">{user.email}</p>
                                     </div>
                                     <span className="text-xs text-gray-400 ml-auto">{user.time}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </motion.div>
+                    <motion.div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm" variants={itemVariants}>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Aktivitas Terbaru</h3>
+                        <ul className="space-y-4">
+                            {recentActivities.map((activity, i) => (
+                                <li key={i} className="flex items-start gap-3">
+                                    <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center bg-gray-100 rounded-full mt-0.5">
+                                        <FiClock className="text-gray-500" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm text-gray-700 leading-tight">
+                                            <span className="font-semibold text-gray-900">{activity.user}</span> {activity.action}
+                                        </p>
+                                    </div>
+                                    <span className="text-xs text-gray-400 ml-auto whitespace-nowrap">{activity.time}</span>
                                 </li>
                             ))}
                         </ul>
