@@ -1,4 +1,4 @@
-import React, { useState, Fragment } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiUser, FiMail, FiPhone, FiLock, FiSmile, FiEdit } from 'react-icons/fi';
@@ -7,15 +7,14 @@ import Card from '../components/Card';
 import { CloudNestLogo } from '../components/Icons';
 import CustomSelect from '../components/CustomSelect';
 import Notification from '../components/Notification';
-import { registerUser } from '../utils/mockApi';
 import LoadingSpinner from '../components/LoadingSpinner';
-
+import { registerUserApi } from '../services/authService'; // <-- Import fungsi API
 
 const genderOptions = [
   { id: 0, name: 'Pilih Gender', value: '' },
-  { id: 1, name: 'Laki-laki', value: 'Laki-laki' },
-  { id: 2, name: 'Perempuan', value: 'Perempuan' },
-  { id: 3, name: 'Lainnya', value: 'Lainnya' },
+  { id: 1, name: 'Male', value: 'Male' },
+  { id: 2, name: 'Female', value: 'Female' },
+  { id: 3, name: 'Other', value: 'Other' },
 ];
 
 const RegisterPage = () => {
@@ -37,41 +36,45 @@ const RegisterPage = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+  
+  const handleValidationError = (message) => {
+    setNotification({ message, type: 'error' });
+    setIsLoading(false);
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setNotification({ message: '', type: '' });
 
-    const { username, fullName, email, phone, age, password, confirmPassword } = formData;
+    const { password, confirmPassword } = formData;
     
-    if (!username) return handleValidationError("Username belum diisi");
-    if (!fullName) return handleValidationError("Nama lengkap belum diisi");
-    if (!email) return handleValidationError("Email belum diisi");
-    if (!phone) return handleValidationError("No. HP belum diisi");
-    if (!age) return handleValidationError("Umur belum diisi");
-    if (!selectedGender.value) return handleValidationError("Gender belum dipilih");
-    if (!password) return handleValidationError("Password belum diisi");
+    // Validasi frontend dasar
+    for (const key in formData) {
+        if (!formData[key]) return handleValidationError(`${key} harus diisi`);
+    }
+    if (!selectedGender.value) return handleValidationError("Gender harus dipilih");
     if (password !== confirmPassword) return handleValidationError("Password tidak cocok");
+    if (password.length < 6) return handleValidationError("Password minimal 6 karakter");
 
     try {
+        // Gabungkan data form dan gender terpilih
         const userData = { ...formData, gender: selectedGender.value };
-        delete userData.confirmPassword;
-
-        await registerUser(userData);
+        
+        // Panggil API backend
+        await registerUserApi(userData);
+        
         setNotification({ message: 'Registrasi berhasil! Anda akan diarahkan ke halaman login.', type: 'success' });
         setTimeout(() => navigate('/'), 2000);
 
     } catch (error) {
-        setNotification({ message: error.message, type: 'error' });
+        // Tampilkan pesan error dari backend
+        const errorMessage = error.response?.data?.message || 'Registrasi gagal. Coba lagi nanti.';
+        setNotification({ message: errorMessage, type: 'error' });
     } finally {
         setIsLoading(false);
     }
   };
-
-  const handleValidationError = (message) => {
-    setNotification({ message, type: 'error' });
-    setIsLoading(false);
-  }
 
   return (
     <>

@@ -6,9 +6,8 @@ import { FiUser, FiLock } from 'react-icons/fi';
 import Card from '../components/Card';
 import { CloudNestLogo } from '../components/Icons';
 import Notification from '../components/Notification';
-import { loginUser } from '../utils/mockApi';
 import LoadingSpinner from '../components/LoadingSpinner';
-
+import { loginUserApi } from '../services/authService'; // <-- Import fungsi API
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -29,19 +28,26 @@ const LoginPage = () => {
     }
 
     try {
-        const user = await loginUser({ identifier, password });
-        setNotification({ message: `Login berhasil! Selamat datang, ${user.fullName}.`, type: 'success' });
+        // Panggil API backend, bukan mockApi
+        const response = await loginUserApi({ identifier, password });
+        const user = response.data; // Data pengguna ada di dalam `response.data`
 
+        setNotification({ message: `Login berhasil! Selamat datang, ${user.name}.`, type: 'success' });
+
+        // Arahkan berdasarkan role pengguna
         setTimeout(() => {
             if (user.role === 'admin') {
                 navigate('/admin/dashboard');
             } else {
-                navigate('/dashboard');
+                navigate('/beranda'); // Arahkan ke beranda user
             }
         }, 1500);
 
     } catch (error) {
-        setNotification({ message: error.message, type: 'error' });
+        // Menampilkan pesan error dari backend
+        const errorMessage = error.response?.data?.message || 'Login gagal. Periksa kembali data Anda.';
+        setNotification({ message: errorMessage, type: 'error' });
+    } finally {
         setIsLoading(false);
     }
   };
@@ -74,7 +80,6 @@ const LoginPage = () => {
           </form>
           <p className="mt-6 text-center text-sm text-sky-800/80">
             Belum punya akun?{' '}
-             {/* Efek Link diperbarui di sini */}
             <Link to="/register" className="font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-sky-400 hover:from-blue-600 hover:to-sky-500 relative inline-block transition-all duration-300 ease-in-out after:content-[''] after:absolute after:w-full after:h-[2px] after:bottom-0 after:left-0 after:bg-sky-400 after:origin-bottom-right after:scale-x-0 hover:after:scale-x-100 hover:after:origin-bottom-left after:transition-transform after:duration-300">
               Daftar di sini
             </Link>

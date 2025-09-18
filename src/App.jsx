@@ -16,10 +16,16 @@ import UserBeranda from './pages/users/UserBeranda.jsx';
 // Admin Pages
 import AdminBeranda from './pages/admin/AdminDashboard.jsx';
 
-// Placeholder components for other pages (biarkan saja untuk halaman lain)
+// Placeholder components for other pages
 const ManageUsers = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Manajemen Pengguna</h1></div>;
 const ManageFiles = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Manajemen File</h1></div>;
-// ...dan placeholder lainnya...
+const CommunityPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Komunitas</h1></div>;
+const LogsPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Log Aktivitas</h1></div>;
+const HelpPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Bantuan</h1></div>;
+const MyFilesPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman File Saya</h1></div>;
+const UploadPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Upload File</h1></div>;
+const ProfilePage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Profil</h1></div>;
+
 
 function App() {
   return (
@@ -31,21 +37,23 @@ function App() {
       </Route>
 
       {/* User Routes */}
-      <Route element={<UserLayout />}>
-        {/* Mengarahkan /beranda ke komponen UserBeranda yang baru */}
-        <Route path="/beranda" element={<UserBeranda />} /> 
-        
-        {/* Anda bisa menambahkan rute lain di sini nanti */}
-        {/* <Route path="/my-files" element={<MyFilesPage />} /> */}
+      <Route path="/beranda" element={<UserLayout />}>
+        <Route index element={<UserBeranda />} />
+        <Route path="my-files" element={<MyFilesPage />} />
+        <Route path="upload" element={<UploadPage />} />
+        <Route path="community" element={<CommunityPage />} />
+        <Route path="help" element={<HelpPage />} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/* Admin Routes */}
-      <Route element={<AdminLayout />}>
-         {/* Mengarahkan /admin/beranda ke komponen AdminBeranda yang baru */}
-        <Route path="/admin/dashboard" element={<AdminBeranda />} />
-        <Route path="/admin/manage-users" element={<ManageUsers />} />
-        <Route path="/admin/manage-files" element={<ManageFiles />} />
-        {/* ...rute admin lainnya... */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route path="dashboard" element={<AdminBeranda />} />
+        <Route path="manage-users" element={<ManageUsers />} />
+        <Route path="manage-files" element={<ManageFiles />} />
+        <Route path="community" element={<CommunityPage />} />
+        <Route path="logs" element={<LogsPage />} />
+        <Route path="help" element={<HelpPage />} />
       </Route>
 
       {/* Fallback Redirect */}
