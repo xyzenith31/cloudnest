@@ -1,4 +1,4 @@
-  import React from 'react';
+import React from 'react';
   import { motion } from 'framer-motion';
   import './css/BackgroundAuth.css';
 
@@ -107,4 +107,4 @@
     );
   };
 
-  export default BackgroundAuth;
+  export default BackgroundAuth;  
