@@ -8,7 +8,7 @@ import { CloudNestLogo } from '../components/Icons';
 import CustomSelect from '../components/CustomSelect';
 import Notification from '../components/Notification';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { registerUserApi } from '../services/authService'; // <-- Import fungsi API
+import { registerUserApi } from '../services/authService';
 
 const genderOptions = [
   { id: 0, name: 'Pilih Gender', value: '' },
