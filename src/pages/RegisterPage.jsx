@@ -8,7 +8,7 @@ import { CloudNestLogo } from '../components/Icons';
 import CustomSelect from '../components/CustomSelect';
 import Notification from '../components/Notification';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { registerUserApi } from '../services/authService'; // <-- Import fungsi API
+import { registerUserApi } from '../services/authService'; // <-- Pastikan ini mengarah ke authService.js yang benar
 
 const genderOptions = [
   { id: 0, name: 'Pilih Gender', value: '' },
@@ -58,17 +58,14 @@ const RegisterPage = () => {
     if (password.length < 6) return handleValidationError("Password minimal 6 karakter");
 
     try {
-        // Gabungkan data form dan gender terpilih
         const userData = { ...formData, gender: selectedGender.value };
         
-        // Panggil API backend
         await registerUserApi(userData);
         
         setNotification({ message: 'Registrasi berhasil! Anda akan diarahkan ke halaman login.', type: 'success' });
         setTimeout(() => navigate('/'), 2000);
 
     } catch (error) {
-        // Tampilkan pesan error dari backend
         const errorMessage = error.response?.data?.message || 'Registrasi gagal. Coba lagi nanti.';
         setNotification({ message: errorMessage, type: 'error' });
     } finally {

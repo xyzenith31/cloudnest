@@ -1,29 +1,23 @@
 import React, { Fragment } from 'react';
 import { Listbox, Transition } from '@headlessui/react';
 import { HiCheck, HiChevronUpDown } from 'react-icons/hi2';
-import { GenderIcon } from './Icons';
 
-const CustomSelect = ({ options, selected, onChange }) => {
-  const isSelected = selected.id !== 0;
+const CustomSelect = ({ options, selected, onChange, icon: Icon }) => {
+  const isSelected = selected && selected.id !== 0;
 
   return (
     <div className="relative">
-      {/* Ikon gender di dalam input field */}
-      <GenderIcon />
+      {Icon && <Icon className="absolute top-1/2 left-4 -translate-y-1/2 text-gray-400 z-10" />}
 
       <Listbox value={selected} onChange={onChange}>
-        {/* Tombol akan berubah warna jika sudah ada pilihan */}
-        <Listbox.Button 
-          className={`form-input relative w-full cursor-default text-left pl-12 transition-colors duration-300 
-            ${isSelected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-sky-900'}`
-          }
+        <Listbox.Button
+          className={`w-full text-left pl-12 pr-4 py-3 bg-gray-100 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 border border-transparent focus:border-blue-400`}
         >
-          <span className={`block truncate ${isSelected ? 'font-semibold' : ''}`}>
+          <span className={`block truncate ${isSelected ? 'font-medium' : 'text-gray-500'}`}>
             {selected.name}
           </span>
           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-            {/* Ubah warna ikon panah agar kontras */}
-            <HiChevronUpDown className={`h-5 w-5 ${isSelected ? 'text-white' : 'text-gray-400'}`} aria-hidden="true" />
+            <HiChevronUpDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
           </span>
         </Listbox.Button>
         <Transition
@@ -34,25 +28,22 @@ const CustomSelect = ({ options, selected, onChange }) => {
         >
           <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm z-20">
             {options.map((option) => (
-              // Jangan tampilkan placeholder "Pilih Gender" di dalam daftar pilihan
               option.id > 0 && (
                 <Listbox.Option
                   key={option.id}
                   className={({ active }) =>
-                    // Warna saat hover (active) menjadi biru muda
                     `relative cursor-default select-none py-2 pl-10 pr-4 ${
                       active ? 'bg-sky-100 text-sky-900' : 'text-gray-900'
                     }`
                   }
                   value={option}
                 >
-                  {({ selected }) => (
+                  {({ selected: isOptionSelected }) => (
                     <>
-                      <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                      <span className={`block truncate ${isOptionSelected ? 'font-medium' : 'font-normal'}`}>
                         {option.name}
                       </span>
-                      {/* Tampilkan centang jika opsi ini yang terpilih */}
-                      {selected ? (
+                      {isOptionSelected ? (
                         <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-sky-600">
                           <HiCheck className="h-5 w-5" aria-hidden="true" />
                         </span>

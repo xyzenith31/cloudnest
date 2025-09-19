@@ -7,7 +7,7 @@ import Card from '../components/Card';
 import { CloudNestLogo } from '../components/Icons';
 import Notification from '../components/Notification';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { loginUserApi } from '../services/authService'; // <-- Import fungsi API
+import { loginUserApi } from '../services/authService'; // <-- Pastikan ini mengarah ke authService.js yang benar
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -28,10 +28,13 @@ const LoginPage = () => {
     }
 
     try {
-        // Panggil API backend, bukan mockApi
+        // Panggil API backend
         const response = await loginUserApi({ identifier, password });
         const user = response.data; // Data pengguna ada di dalam `response.data`
 
+        // Simpan token ke localStorage untuk sesi pengguna
+        localStorage.setItem('userToken', user.token);
+        
         setNotification({ message: `Login berhasil! Selamat datang, ${user.name}.`, type: 'success' });
 
         // Arahkan berdasarkan role pengguna
@@ -39,7 +42,7 @@ const LoginPage = () => {
             if (user.role === 'admin') {
                 navigate('/admin/dashboard');
             } else {
-                navigate('/beranda'); // Arahkan ke beranda user
+                navigate('/beranda');
             }
         }, 1500);
 
