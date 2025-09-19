@@ -1,76 +1,164 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FiLayout, FiUsers, FiFolder, FiMessageSquare,
-  FiActivity, FiHelpCircle, FiLogOut, FiChevronLeft, FiChevronRight
-} from 'react-icons/fi'; // Corrected import path
-import { FaCloud } from 'react-icons/fa'; // Corrected import path
+  FiLayout, FiUsers, FiFolder, FiMessageSquare, FiActivity,
+  FiHelpCircle, FiLogOut, FiChevronLeft, FiChevronRight,
+  FiClock, FiWifi, FiWifiOff, FiSettings, FiUser
+} from 'react-icons/fi';
+import { FaCloud } from 'react-icons/fa';
+import { io } from 'socket.io-client';
 
-// Komponen untuk setiap item di sidebar
-const SidebarItem = ({ icon: Icon, text, to, isExpanded }) => {
+const socket = io("http://localhost:3001");
+
+// --- Latar Belakang Putih dengan Bintik Biru ---
+const DottedBackground = () => (
+  <div className="absolute inset-0 z-0 overflow-hidden">
+    <div className="absolute inset-0 bg-slate-50/90" />
+    {[...Array(50)].map((_, i) => {
+      const size = Math.random() * 2.5 + 1.5;
+      const duration = Math.random() * 7 + 5;
+      return (
+        <motion.div
+          key={i}
+          className="absolute rounded-full bg-blue-500/60"
+          style={{
+            width: size, height: size,
+            top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`,
+          }}
+          animate={{
+            y: [0, Math.random() * 50 - 25, 0],
+            x: [0, Math.random() * 50 - 25, 0],
+            scale: [1, 1.5, 1],
+            opacity: [0, 0.8, 0],
+          }}
+          transition={{ duration, repeat: Infinity, ease: "easeInOut", delay: Math.random() * 7 }}
+        />
+      );
+    })}
+  </div>
+);
+
+// --- Komponen Item Menu ---
+const SidebarItem = ({ icon: Icon, text, to, isExpanded, variants }) => {
   return (
-    <NavLink
-      to={to}
-      className={({ isActive }) =>
-        `flex items-center p-3 my-1 rounded-lg cursor-pointer transition-all duration-300
-         ${isActive
-          ? 'bg-blue-500 text-white shadow-lg scale-105'
-          : 'text-sky-900 hover:bg-sky-100 hover:shadow-inner'
-        }`
-      }
-    >
-      <Icon className="text-2xl flex-shrink-0" />
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.span
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: 'auto' }}
-            exit={{ opacity: 0, width: 0 }}
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="ml-4 font-semibold whitespace-nowrap"
-          >
-            {text}
-          </motion.span>
+    <motion.div variants={variants}>
+      <NavLink to={to} className="relative group">
+        {({ isActive }) => (
+          <>
+            {isActive && (
+              <motion.div
+                layoutId="active-sidebar-item"
+                className="absolute inset-0 bg-blue-500 rounded-lg shadow-lg"
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              />
+            )}
+            <div className={`relative flex items-center p-3 my-1 rounded-lg cursor-pointer transition-colors duration-200 z-10 ${isActive ? 'text-white' : 'text-sky-900 group-hover:bg-sky-100/70'}`}>
+              <motion.div animate={{ filter: isActive ? 'drop-shadow(0 0 5px #fff)' : 'none' }}>
+                <Icon className="text-2xl flex-shrink-0 transition-transform duration-300 group-hover:scale-110" />
+              </motion.div>
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.span
+                    initial={{ opacity: 0, x: -15 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -15 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="ml-4 font-semibold whitespace-nowrap"
+                  >
+                    {text}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </div>
+          </>
         )}
-      </AnimatePresence>
-    </NavLink>
+      </NavLink>
+    </motion.div>
   );
 };
 
-// Komponen profil pengguna yang lebih simpel
-const UserProfile = ({ name, role, isExpanded }) => {
-  const initials = name
-    .split(' ')
-    .map((n) => n[0])
-    .join('');
-
+// --- Komponen Aksi Profil dengan Dropdown Responsif ---
+const UserProfileActions = ({ name, role, isExpanded }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const initials = name.split(' ').map((n) => n[0]).join('');
   return (
-    <div className="flex items-center p-2 rounded-lg transition-colors duration-300 hover:bg-slate-200/50">
-      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-        {initials}
-      </div>
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="ml-3 overflow-hidden"
-          >
-            <p className="font-semibold text-sm text-sky-900 whitespace-nowrap">{name}</p>
-            <p className="text-xs text-gray-500 whitespace-nowrap">{role}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="relative">
+        <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center p-2 rounded-lg transition-colors duration-300 hover:bg-gray-200/60">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 border-2 border-white/50 shadow-md">
+                {initials}
+            </div>
+            <AnimatePresence>
+            {isExpanded && (
+                <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="ml-3 overflow-hidden text-left"
+                >
+                <p className="font-semibold text-sm text-sky-900 whitespace-nowrap">{name}</p>
+                <p className="text-xs text-gray-500 whitespace-nowrap">{role}</p>
+                </motion.div>
+            )}
+            </AnimatePresence>
+        </button>
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.1, ease: 'easeOut' }}
+                    className={`absolute z-20 w-48 p-2 bg-white/90 backdrop-blur-md rounded-lg shadow-xl border border-gray-200 
+                        ${isExpanded 
+                            ? 'bottom-full left-0 right-0 mb-2' 
+                            : 'bottom-0 left-full ml-2'}` // <-- PERBAIKAN DI SINI
+                    }
+                >
+                    <NavLink to="/admin/profile" className="w-full flex items-center gap-2 p-2 text-sm text-gray-700 hover:bg-sky-100 rounded-md"><FiUser /> Profile</NavLink>
+                    <NavLink to="/admin/settings" className="w-full flex items-center gap-2 p-2 text-sm text-gray-700 hover:bg-sky-100 rounded-md"><FiSettings /> Settings</NavLink>
+                    <div className="my-1 h-px bg-gray-200" />
+                    <NavLink to="/" className="w-full flex items-center gap-2 p-2 text-sm text-red-600 hover:bg-red-100 rounded-md"><FiLogOut /> Logout</NavLink>
+                </motion.div>
+            )}
+        </AnimatePresence>
     </div>
   );
 };
+  
+// --- Widget Status Sistem ---
+const SystemStatusWidget = ({ isExpanded, isOnline }) => {
+    const [time, setTime] = useState(new Date());
+    const [latency, setLatency] = useState(0);
 
+    useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        const latencyTimer = setInterval(() => setLatency(Math.floor(Math.random() * (45 - 20 + 1)) + 20), 2000);
+        return () => { clearInterval(timer); clearInterval(latencyTimer); };
+    }, []);
+
+    return (
+        <AnimatePresence>
+            {isExpanded && (
+                 <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="my-4 pt-4 border-t border-gray-200/80 text-xs text-gray-500"
+                 >
+                    <div className="flex justify-between items-center"><div className="flex items-center gap-2"><FiClock /><span>Client Time</span></div><span>{time.toLocaleTimeString()}</span></div>
+                    <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-2"><FiWifi className="text-green-500"/><span>Ping</span></div><span className="font-mono">{latency} ms</span></div>
+                    <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-2">{isOnline ? <FiWifi className="text-green-500"/> : <FiWifiOff className="text-red-500" />}<span>Server Status</span></div><span className={`font-mono font-bold ${isOnline ? 'text-green-500' : 'text-red-500'}`}>{isOnline ? 'ONLINE' : 'OFFLINE'}</span></div>
+                 </motion.div>
+            )}
+        </AnimatePresence>
+    )
+}
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isServerOnline, setIsServerOnline] = useState(socket.connected);
 
   const menuItems = [
     { icon: FiLayout, text: 'Dashboard', to: '/admin/dashboard' },
@@ -80,82 +168,54 @@ const Sidebar = () => {
     { icon: FiActivity, text: 'Aktivitas Log', to: '/admin/logs' },
     { icon: FiHelpCircle, text: 'Bantuan', to: '/admin/help' },
   ];
-  
-  const sidebarVariants = {
-    expanded: { width: '280px' },
-    collapsed: { width: '88px' },
+
+  const sidebarVariants = { expanded: { width: '280px' }, collapsed: { width: '88px' } };
+  const navContainerVariants = {
+    visible: { transition: { staggerChildren: 0.05, delayChildren: isExpanded ? 0.2 : 0 } },
+    hidden: { transition: { staggerChildren: 0.05, staggerDirection: -1 } },
   };
+  const navItemVariants = { visible: { opacity: 1, x: 0 }, hidden: { opacity: 0, x: -10 } };
+
+  useEffect(() => {
+    const onConnect = () => setIsServerOnline(true);
+    const onDisconnect = () => setIsServerOnline(false);
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    return () => { socket.off('connect', onConnect); socket.off('disconnect', onDisconnect); };
+  }, []);
 
   return (
     <motion.aside
       variants={sidebarVariants}
       animate={isExpanded ? 'expanded' : 'collapsed'}
-      transition={{ duration: 0.5, ease: 'easeInOut' }}
-      className="bg-gradient-to-b from-white to-slate-50 h-screen flex flex-col p-4 border-r border-gray-200/80 shadow-2xl relative"
+      transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+      className="h-screen flex flex-col p-4 border-r border-gray-200/80 shadow-2xl relative bg-slate-50/80 backdrop-blur-xl"
     >
-      {/* [NEW] Efek cahaya pemisah */}
-      <div className="absolute top-0 right-0 h-full w-0.5 bg-gradient-to-b from-sky-300 via-blue-500 to-purple-500 shadow-[0_0_10px_#60a5fa] opacity-70 animate-pulse"></div>
-
-      {/* Tombol Minimize/Maximize dengan efek baru */}
+      <DottedBackground />
+      <div className="absolute top-0 right-0 h-full w-1.5 bg-gradient-to-b from-sky-300 via-blue-500 to-purple-500 shadow-[0_0_20px_2px_#3b82f6] opacity-90 animate-pulse z-10"></div>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="absolute -right-4 top-10 bg-white border-2 border-blue-500 text-blue-500 rounded-full w-8 h-8 flex items-center justify-center cursor-pointer hover:bg-blue-500 hover:text-white hover:scale-110 transition-all duration-300 z-10"
+        className="absolute -right-3.5 top-8 bg-white border-2 border-blue-500 text-blue-500 rounded-full w-7 h-7 flex items-center justify-center cursor-pointer hover:bg-blue-500 hover:text-white hover:scale-110 transition-all duration-300 z-20 shadow-md"
       >
-        {isExpanded ? <FiChevronLeft /> : <FiChevronRight />}
+        {isExpanded ? <FiChevronLeft size={16} /> : <FiChevronRight size={16} />}
       </button>
 
-      {/* Logo dengan ikon animasi */}
-      <div className="flex items-center mb-8 p-3">
-        <motion.div
-          animate={{ y: [0, -3, 0] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-        >
+      <div className="flex items-center mb-6 p-3 z-10">
+        <motion.div animate={{ scale: [1, 1.1, 1], filter: ['drop-shadow(0 0 4px #3b82f6)', 'drop-shadow(0 0 12px #3b82f6)', 'drop-shadow(0 0 4px #3b82f6)'] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}>
           <FaCloud className="text-4xl text-blue-500" />
         </motion.div>
         <AnimatePresence>
-        {isExpanded && (
-            <motion.h1
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="ml-2 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-sky-700 whitespace-nowrap"
-            >
-              CloudNest
-            </motion.h1>
-        )}
+          {isExpanded && ( <motion.h1 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3, delay: 0.1, ease: 'circOut' }} className="ml-2 text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-sky-700 whitespace-nowrap"> CloudNest </motion.h1> )}
         </AnimatePresence>
       </div>
 
-      {/* Menu Navigasi */}
-      <nav className="flex-grow">
-        {menuItems.map((item) => (
-          <SidebarItem key={item.text} {...item} isExpanded={isExpanded} />
-        ))}
-      </nav>
+      <motion.nav variants={navContainerVariants} initial="hidden" animate={isExpanded ? "visible" : "hidden"} className="flex-grow z-10">
+        {menuItems.map((item) => <SidebarItem key={item.text} {...item} isExpanded={isExpanded} variants={navItemVariants} />)}
+      </motion.nav>
 
-      {/* Profile dan Logout dengan area terpisah */}
-      <div className="mt-auto pt-4 border-t border-gray-200/80">
-        <UserProfile name="Admin" role="Admin Role" isExpanded={isExpanded} />
-        <NavLink
-            to="/"
-            className="flex items-center p-3 mt-1 rounded-lg cursor-pointer text-red-600 hover:bg-red-100 transition-colors duration-300"
-        >
-            <FiLogOut className="text-2xl flex-shrink-0" />
-            <AnimatePresence>
-                {isExpanded && (
-                <motion.span
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="ml-4 font-semibold whitespace-nowrap"
-                >
-                    Logout
-                </motion.span>
-                )}
-            </AnimatePresence>
-        </NavLink>
+      <div className="mt-auto pt-4 border-t border-gray-200/80 z-10">
+        <SystemStatusWidget isExpanded={isExpanded} isOnline={isServerOnline} />
+        <UserProfileActions name="Admin" role="Admin Role" isExpanded={isExpanded} />
       </div>
     </motion.aside>
   );
