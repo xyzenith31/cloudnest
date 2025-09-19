@@ -15,9 +15,9 @@ import UserBeranda from './pages/users/UserBeranda.jsx';
 
 // Admin Pages
 import AdminBeranda from './pages/admin/AdminDashboard.jsx';
+import ManajemenPengguna from './pages/admin/ManajemenPengguna.jsx';
 
 // Placeholder components for other pages
-const ManageUsers = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Manajemen Pengguna</h1></div>;
 const ManageFiles = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Manajemen File</h1></div>;
 const CommunityPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Komunitas</h1></div>;
 const LogsPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Log Aktivitas</h1></div>;
@@ -49,7 +49,7 @@ function App() {
       {/* Admin Routes */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route path="dashboard" element={<AdminBeranda />} />
-        <Route path="manage-users" element={<ManageUsers />} />
+        <Route path="manage-users" element={<ManajemenPengguna />} />
         <Route path="manage-files" element={<ManageFiles />} />
         <Route path="community" element={<CommunityPage />} />
         <Route path="logs" element={<LogsPage />} />
