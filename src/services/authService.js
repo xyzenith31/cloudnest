@@ -5,7 +5,8 @@ const API_URL = 'http://localhost:3001/api/auth';
 
 /**
  * Fungsi untuk melakukan registrasi pengguna baru.
- * @param {object} userData - Data pengguna dari form registrasi.
+ * Dibuat lebih fleksibel untuk menerima nama state yang berbeda dari berbagai form.
+ * @param {object} userData - Data pengguna dari form.
  * @returns {Promise<object>} Data pengguna yang berhasil didaftarkan.
  */
 export const registerUserApi = (userData) => {
@@ -13,9 +14,9 @@ export const registerUserApi = (userData) => {
   const payload = {
     username: userData.username,
     email: userData.email,
-    name: userData.fullName, // 'fullName' di frontend menjadi 'name' di backend
-    noHp: userData.phone,    // 'phone' di frontend menjadi 'noHp' di backend
-    age: Number(userData.age), // Pastikan umur adalah angka
+    name: userData.name || userData.fullName, // <-- Terima 'name' ATAU 'fullName'
+    noHp: userData.noHp || userData.phone,    // <-- Terima 'noHp' ATAU 'phone'
+    age: Number(userData.age),
     gender: userData.gender,
     password: userData.password,
   };
@@ -30,8 +31,8 @@ export const registerUserApi = (userData) => {
 export const loginUserApi = (credentials) => {
   // Mapping nama field dari frontend ke backend
   const payload = {
-    loginIdentifier: credentials.identifier, // 'identifier' di frontend menjadi 'loginIdentifier'
+    loginIdentifier: credentials.identifier,
     password: credentials.password,
   };
   return axios.post(`${API_URL}/login`, payload);
-};  
+};
