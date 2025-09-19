@@ -19,6 +19,7 @@ export const registerUserApi = (userData) => {
     age: Number(userData.age),
     gender: userData.gender,
     password: userData.password,
+    role: userData.role || 'user' // Menambahkan role saat registrasi dari admin
   };
   return axios.post(`${API_URL}/register`, payload);
 };
