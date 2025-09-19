@@ -7,7 +7,7 @@ import Card from '../components/Card';
 import { CloudNestLogo } from '../components/Icons';
 import Notification from '../components/Notification';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { loginUserApi } from '../services/authService';
+import { loginUserApi } from '../services/authService'; // <-- Import fungsi API
 
 const LoginPage = () => {
   const navigate = useNavigate();
