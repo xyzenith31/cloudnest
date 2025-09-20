@@ -11,7 +11,34 @@ import { io } from 'socket.io-client';
 
 const socket = io("http://localhost:3001");
 
-// --- Latar Belakang Putih dengan Bintik Biru ---
+// --- Komponen untuk Tombol Buka/Tutup Sidebar ---
+export const ToggleButton = ({ isExpanded, onClick }) => (
+  <motion.button
+    onClick={onClick}
+    className="absolute top-8 w-8 h-8 bg-white border-2 border-blue-500 rounded-full flex items-center justify-center text-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-300 z-50 shadow-lg hover:shadow-blue-300"
+    animate={{
+      left: isExpanded ? '266px' : '74px', // 280px - 14px | 88px - 14px
+      rotate: isExpanded ? 360 : 0,
+    }}
+    whileHover={{ scale: 1.1 }}
+    whileTap={{ scale: 0.9 }}
+    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+  >
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={isExpanded ? 'left' : 'right'}
+        initial={{ rotate: -90, opacity: 0 }}
+        animate={{ rotate: 0, opacity: 1 }}
+        exit={{ rotate: 90, opacity: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        {isExpanded ? <FiChevronLeft size={18} /> : <FiChevronRight size={18} />}
+      </motion.div>
+    </AnimatePresence>
+  </motion.button>
+);
+
+// --- Komponen Latar Belakang Animasi ---
 const DottedBackground = () => (
   <div className="absolute inset-0 z-0 overflow-hidden">
     <div className="absolute inset-0 bg-slate-50/90" />
@@ -39,9 +66,8 @@ const DottedBackground = () => (
   </div>
 );
 
-// --- Komponen Item Menu ---
-const SidebarItem = ({ icon: Icon, text, to, isExpanded, variants }) => {
-  return (
+// --- Komponen Item Menu Navigasi ---
+const SidebarItem = ({ icon: Icon, text, to, isExpanded, variants }) => (
     <motion.div variants={variants}>
       <NavLink to={to} className="relative group">
         {({ isActive }) => (
@@ -75,10 +101,9 @@ const SidebarItem = ({ icon: Icon, text, to, isExpanded, variants }) => {
         )}
       </NavLink>
     </motion.div>
-  );
-};
+);
 
-// --- Komponen Aksi Profil dengan Dropdown Responsif ---
+// --- Komponen Profil Pengguna dan Dropdown ---
 const UserProfileActions = ({ name, role, isExpanded }) => {
   const [isOpen, setIsOpen] = useState(false);
   const initials = name.split(' ').map((n) => n[0]).join('');
@@ -113,7 +138,7 @@ const UserProfileActions = ({ name, role, isExpanded }) => {
                     className={`absolute z-20 w-48 p-2 bg-white/90 backdrop-blur-md rounded-lg shadow-xl border border-gray-200 
                         ${isExpanded 
                             ? 'bottom-full left-0 right-0 mb-2' 
-                            : 'bottom-0 left-full ml-2'}` // <-- PERBAIKAN DI SINI
+                            : 'bottom-0 left-full ml-2'}`
                     }
                 >
                     <NavLink to="/admin/profile" className="w-full flex items-center gap-2 p-2 text-sm text-gray-700 hover:bg-sky-100 rounded-md"><FiUser /> Profile</NavLink>
@@ -126,8 +151,8 @@ const UserProfileActions = ({ name, role, isExpanded }) => {
     </div>
   );
 };
-  
-// --- Widget Status Sistem ---
+ 
+// --- Komponen Widget Status Sistem ---
 const SystemStatusWidget = ({ isExpanded, isOnline }) => {
     const [time, setTime] = useState(new Date());
     const [latency, setLatency] = useState(0);
@@ -141,23 +166,23 @@ const SystemStatusWidget = ({ isExpanded, isOnline }) => {
     return (
         <AnimatePresence>
             {isExpanded && (
-                 <motion.div
+                  <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
                     className="my-4 pt-4 border-t border-gray-200/80 text-xs text-gray-500"
-                 >
+                  >
                     <div className="flex justify-between items-center"><div className="flex items-center gap-2"><FiClock /><span>Client Time</span></div><span>{time.toLocaleTimeString()}</span></div>
                     <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-2"><FiWifi className="text-green-500"/><span>Ping</span></div><span className="font-mono">{latency} ms</span></div>
                     <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-2">{isOnline ? <FiWifi className="text-green-500"/> : <FiWifiOff className="text-red-500" />}<span>Server Status</span></div><span className={`font-mono font-bold ${isOnline ? 'text-green-500' : 'text-red-500'}`}>{isOnline ? 'ONLINE' : 'OFFLINE'}</span></div>
-                 </motion.div>
+                  </motion.div>
             )}
         </AnimatePresence>
     )
 }
 
-const Sidebar = () => {
-  const [isExpanded, setIsExpanded] = useState(true);
+// --- Komponen Utama Sidebar ---
+const Sidebar = ({ isExpanded }) => {
   const [isServerOnline, setIsServerOnline] = useState(socket.connected);
 
   const menuItems = [
@@ -189,17 +214,11 @@ const Sidebar = () => {
       variants={sidebarVariants}
       animate={isExpanded ? 'expanded' : 'collapsed'}
       transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-      className="h-screen flex flex-col p-4 border-r border-gray-200/80 shadow-2xl relative bg-slate-50/80 backdrop-blur-xl"
+      className="h-screen flex flex-col p-4 border-r border-gray-200/80 shadow-2xl relative bg-slate-50/80 backdrop-blur-xl z-30"
     >
       <DottedBackground />
       <div className="absolute top-0 right-0 h-full w-1.5 bg-gradient-to-b from-sky-300 via-blue-500 to-purple-500 shadow-[0_0_20px_2px_#3b82f6] opacity-90 animate-pulse z-10"></div>
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="absolute -right-3.5 top-8 bg-white border-2 border-blue-500 text-blue-500 rounded-full w-7 h-7 flex items-center justify-center cursor-pointer hover:bg-blue-500 hover:text-white hover:scale-110 transition-all duration-300 z-20 shadow-md"
-      >
-        {isExpanded ? <FiChevronLeft size={16} /> : <FiChevronRight size={16} />}
-      </button>
-
+      
       <div className="flex items-center mb-6 p-3 z-10">
         <motion.div animate={{ scale: [1, 1.1, 1], filter: ['drop-shadow(0 0 4px #3b82f6)', 'drop-shadow(0 0 12px #3b82f6)', 'drop-shadow(0 0 4px #3b82f6)'] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}>
           <FaCloud className="text-4xl text-blue-500" />
@@ -209,11 +228,11 @@ const Sidebar = () => {
         </AnimatePresence>
       </div>
 
-      <motion.nav variants={navContainerVariants} initial="hidden" animate={isExpanded ? "visible" : "hidden"} className="flex-grow z-10">
+      <motion.nav variants={navContainerVariants} initial="hidden" animate="visible" className="flex-grow z-10">
         {menuItems.map((item) => <SidebarItem key={item.text} {...item} isExpanded={isExpanded} variants={navItemVariants} />)}
       </motion.nav>
 
-      <div className="mt-auto pt-4 border-t border-gray-200/80 z-10">
+      <div className="pt-4 border-t border-gray-200/80 z-10">
         <SystemStatusWidget isExpanded={isExpanded} isOnline={isServerOnline} />
         <UserProfileActions name="Admin" role="Admin Role" isExpanded={isExpanded} />
       </div>
