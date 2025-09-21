@@ -8,6 +8,7 @@ import {
 } from 'react-icons/fi';
 import { FaCloud } from 'react-icons/fa';
 import { io } from 'socket.io-client';
+import { getUserById } from '../services/userService'; // <-- [PENTING] Import fungsi untuk mengambil data user
 
 // Koneksi ke server backend
 const socket = io("http://localhost:3001");
@@ -104,8 +105,8 @@ const SidebarItem = ({ icon: Icon, text, to, isExpanded, variants }) => (
     </motion.div>
 );
 
-// --- Komponen Profil Pengguna dan Dropdown ---
-const UserProfileActions = ({ name, role, isExpanded }) => {
+// --- [FIX] Komponen Profil Pengguna yang Sudah Diperbarui ---
+const UserProfileActions = ({ user, isExpanded }) => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -117,35 +118,38 @@ const UserProfileActions = ({ name, role, isExpanded }) => {
   const getInitials = (name) => {
     if (!name || typeof name !== 'string') return '?';
     const nameParts = name.trim().split(' ').filter(Boolean);
-  
     if (nameParts.length === 0) return '?';
-    if (nameParts.length === 1) {
-      return nameParts[0].substring(0, 2).toUpperCase();
-    }
+    if (nameParts.length === 1) return nameParts[0].substring(0, 2).toUpperCase();
     const firstInitial = nameParts[0][0];
     const lastInitial = nameParts[nameParts.length - 1][0];
     return `${firstInitial}${lastInitial}`.toUpperCase();
   };
 
-  const initials = getInitials(name);
-
   return (
     <div className="relative">
         <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center p-2 rounded-lg transition-colors duration-300 hover:bg-gray-200/60">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 border-2 border-white/50 shadow-md">
-                {initials}
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 border-2 border-white/50 shadow-md overflow-hidden">
+                {user.avatar ? (
+                    <img 
+                        src={`http://localhost:3001/${user.avatar}`} 
+                        alt={user.name}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <span>{getInitials(user.name)}</span>
+                )}
             </div>
             <AnimatePresence>
             {isExpanded && (
                 <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="ml-3 overflow-hidden text-left"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="ml-3 overflow-hidden text-left"
                 >
-                <p className="font-semibold text-sm text-sky-900 truncate" title={name}>{name}</p>
-                <p className="text-xs text-gray-500 truncate" title={role}>{role}</p>
+                  <p className="font-semibold text-sm text-sky-900 truncate" title={user.name}>{user.name}</p>
+                  <p className="text-xs text-gray-500 truncate" title={user.role}>{user.role}</p>
                 </motion.div>
             )}
             </AnimatePresence>
@@ -160,8 +164,7 @@ const UserProfileActions = ({ name, role, isExpanded }) => {
                     className={`absolute z-20 w-48 p-2 bg-white/90 backdrop-blur-md rounded-lg shadow-xl border border-gray-200 
                         ${isExpanded 
                             ? 'bottom-full left-0 right-0 mb-2' 
-                            // [FIX] Posisi lebih ke atas dan hapus tombol settings
-                            : 'bottom-4 left-full ml-5'}` 
+                            : 'bottom-4 left-full ml-5'}`
                     }
                 >
                     <NavLink to="/admin/profile" className="w-full flex items-center gap-2 p-2 text-sm text-gray-700 hover:bg-sky-100 rounded-md"><FiUser /> Profile</NavLink>
@@ -215,7 +218,7 @@ const SystemStatusWidget = ({ isExpanded, isOnline }) => {
 // --- Komponen Utama Sidebar ---
 const Sidebar = ({ isExpanded }) => {
   const [isServerOnline, setIsServerOnline] = useState(socket.connected);
-  const [user, setUser] = useState({ name: 'Guest', role: 'Guest' });
+  const [user, setUser] = useState({ name: 'Guest', role: 'Guest', avatar: null });
 
   const menuItems = [
     { icon: FiLayout, text: 'Dashboard', to: '/admin/dashboard' },
@@ -234,10 +237,20 @@ const Sidebar = ({ isExpanded }) => {
   const navItemVariants = { visible: { opacity: 1, x: 0 }, hidden: { opacity: 0, x: -10 } };
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
+    // [FIX] Ambil data user terbaru dari backend
+    const fetchUserData = async () => {
+        const storedUser = JSON.parse(localStorage.getItem('user'));
+        if (storedUser && storedUser._id) {
+            try {
+                const response = await getUserById(storedUser._id);
+                setUser(response.data);
+            } catch (error) {
+                console.error("Gagal mengambil data user untuk sidebar:", error);
+                setUser(storedUser); // Fallback ke data lama jika gagal
+            }
+        }
+    };
+    fetchUserData();
 
     const onConnect = () => setIsServerOnline(true);
     const onDisconnect = () => setIsServerOnline(false);
@@ -271,7 +284,7 @@ const Sidebar = ({ isExpanded }) => {
 
       <div className="pt-4 border-t border-gray-200/80 z-10">
         <SystemStatusWidget isExpanded={isExpanded} isOnline={isServerOnline} />
-        <UserProfileActions name={user.name} role={user.role} isExpanded={isExpanded} />
+        <UserProfileActions user={user} isExpanded={isExpanded} />
       </div>
     </motion.aside>
   );
