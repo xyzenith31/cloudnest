@@ -4,14 +4,21 @@ import { motion } from 'framer-motion';
 import { FiUser, FiLogOut, FiHardDrive } from 'react-icons/fi';
 import './css/ProfileDropdown.css';
 
-// Fungsi untuk mendapatkan inisial dari nama
+// [FIX] Logika inisial nama yang lebih baik
 const getInitials = (name) => {
-  if (!name) return '';
-  return name.split(' ').map((n) => n[0]).join('').toUpperCase();
+  if (!name || typeof name !== 'string') return '?';
+  const nameParts = name.trim().split(' ').filter(Boolean);
+
+  if (nameParts.length === 0) return '?';
+  if (nameParts.length === 1) {
+    return nameParts[0].substring(0, 2).toUpperCase();
+  }
+  const firstInitial = nameParts[0][0];
+  const lastInitial = nameParts[nameParts.length - 1][0];
+  return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
-const ProfileDropdown = ({ userName, userEmail }) => {
-    // Data dummy untuk penggunaan penyimpanan (total 10GB)
+const ProfileDropdown = ({ userName, userEmail, onLogout }) => {
     const storage = {
         used: '7.2 GB',
         total: '10 GB',
@@ -29,7 +36,6 @@ const ProfileDropdown = ({ userName, userEmail }) => {
             className="profile-dropdown-new"
         >
             <div className="profile-header-new">
-                {/* [BARU] Avatar Inisial Pengguna */}
                 <motion.div 
                     className="profile-avatar-initials"
                     initial={{ scale: 0 }}
@@ -68,9 +74,9 @@ const ProfileDropdown = ({ userName, userEmail }) => {
             </div>
             
             <div className="profile-footer-new">
-                <NavLink to="/" className="profile-item-new logout">
+                <button onClick={onLogout} className="profile-item-new logout w-full text-left">
                     <FiLogOut /><span>Logout</span>
-                </NavLink>
+                </button>
             </div>
         </motion.div>
     );

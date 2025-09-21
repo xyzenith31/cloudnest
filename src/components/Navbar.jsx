@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink, Link, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiHome, FiFile, FiUploadCloud, FiUsers, FiHelpCircle, FiBell, FiMenu, FiX } from 'react-icons/fi';
 import { FaCloud } from 'react-icons/fa';
@@ -23,8 +23,18 @@ const useClickOutside = (ref, handler) => {
   }, [ref, handler]);
 };
 
+// [FIX] Logika inisial nama yang lebih baik
 const getInitials = (name) => {
-  return name.split(' ').map((n) => n[0]).join('').toUpperCase();
+  if (!name || typeof name !== 'string') return '?';
+  const nameParts = name.trim().split(' ').filter(Boolean);
+
+  if (nameParts.length === 0) return '?';
+  if (nameParts.length === 1) {
+    return nameParts[0].substring(0, 2).toUpperCase();
+  }
+  const firstInitial = nameParts[0][0];
+  const lastInitial = nameParts[nameParts.length - 1][0];
+  return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
 const navLinksData = [
@@ -43,11 +53,11 @@ const NavLinks = ({ isMobile, onLinkClick }) => {
 
     return (
         <>
-            {navLinksData.map((link, index) => (
+            {navLinksData.map((link) => (
                 <motion.div key={link.to} variants={itemVariants}>
                     <NavLink
                         to={link.to}
-                        onClick={onLinkClick} // Ini akan null jika tidak ada fungsi yang diberikan
+                        onClick={onLinkClick}
                         className={({ isActive }) => 
                             `nav-link-modern ${isActive ? 'active' : ''} ${isMobile ? 'mobile' : ''}`
                         }
@@ -66,9 +76,18 @@ const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [sliderPosition, setSliderPosition] = useState({ left: 0, width: 0 });
-
+  const [user, setUser] = useState({ name: '', email: '' });
+  
   const navRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
 
   useEffect(() => {
     const activeLink = navRef.current?.querySelector('.nav-link-modern.active:not(.mobile)');
@@ -78,7 +97,7 @@ const Navbar = () => {
         width: activeLink.offsetWidth,
       });
     }
-  }, [location]);
+  }, [location, isMobileMenuOpen]);
   
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -91,9 +110,6 @@ const Navbar = () => {
     };
   }, [isMobileMenuOpen]);
 
-  const userName = "Donny Indra";
-  const userEmail = "donny.indra@example.com";
-  
   const notifRef = useRef();
   const profileRef = useRef();
   const mobileMenuRef = useRef();
@@ -111,6 +127,12 @@ const Navbar = () => {
   const toggleNotif = () => setIsNotifOpen(prev => !prev);
   const toggleProfile = () => setIsProfileOpen(prev => !prev);
   const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setIsProfileOpen(false);
+    navigate('/');
+  };
 
   const containerVariants = {
       hidden: { transition: { staggerChildren: 0.05, staggerDirection: -1 } },
@@ -131,7 +153,7 @@ const Navbar = () => {
 
         <div className="navbar-section center hidden lg:flex">
           <div className="nav-links-modern" ref={navRef}>
-            <NavLinks isMobile={false} />
+            <NavLinks isMobile={false} onLinkClick={() => setIsMobileMenuOpen(false)} />
             <motion.div
               className="nav-slider"
               animate={sliderPosition}
@@ -158,11 +180,11 @@ const Navbar = () => {
           </div>
           <div ref={profileRef} className="navbar-item-wrapper">
             <motion.button whileTap={{ scale: 0.95 }} onClick={toggleProfile} className="profile-container-modern">
-              <div className="profile-avatar-modern"><span>{getInitials(userName)}</span></div>
-              <span className="profile-name-modern hidden md:block">{userName}</span>
+              <div className="profile-avatar-modern"><span>{getInitials(user.name)}</span></div>
+              <span className="profile-name-modern hidden md:block">{user.name}</span>
             </motion.button>
             <AnimatePresence>
-              {isProfileOpen && <ProfileDropdown userName={userName} userEmail={userEmail} />}
+              {isProfileOpen && <ProfileDropdown userName={user.name} userEmail={user.email} onLogout={handleLogout} />}
             </AnimatePresence>
           </div>
           <div className="lg:hidden">
@@ -203,8 +225,7 @@ const Navbar = () => {
                 initial="hidden"
                 animate="visible"
               >
-                {/* [DIPERBARUI] onLinkClick dihapus agar menu tidak tertutup */}
-                <NavLinks isMobile={true} />
+                <NavLinks isMobile={true} onLinkClick={() => setIsMobileMenuOpen(false)} />
               </motion.nav>
             </motion.div>
           </>

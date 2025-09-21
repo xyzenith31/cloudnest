@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiLayout, FiUsers, FiFolder, FiMessageSquare, FiActivity,
@@ -9,6 +9,7 @@ import {
 import { FaCloud } from 'react-icons/fa';
 import { io } from 'socket.io-client';
 
+// Koneksi ke server backend
 const socket = io("http://localhost:3001");
 
 // --- Komponen untuk Tombol Buka/Tutup Sidebar ---
@@ -17,7 +18,7 @@ export const ToggleButton = ({ isExpanded, onClick }) => (
     onClick={onClick}
     className="absolute top-8 w-8 h-8 bg-white border-2 border-blue-500 rounded-full flex items-center justify-center text-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-300 z-50 shadow-lg hover:shadow-blue-300"
     animate={{
-      left: isExpanded ? '266px' : '74px', // 280px - 14px | 88px - 14px
+      left: isExpanded ? '266px' : '74px',
       rotate: isExpanded ? 360 : 0,
     }}
     whileHover={{ scale: 1.1 }}
@@ -106,7 +107,28 @@ const SidebarItem = ({ icon: Icon, text, to, isExpanded, variants }) => (
 // --- Komponen Profil Pengguna dan Dropdown ---
 const UserProfileActions = ({ name, role, isExpanded }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const initials = name.split(' ').map((n) => n[0]).join('');
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    navigate('/');
+  };
+  
+  const getInitials = (name) => {
+    if (!name || typeof name !== 'string') return '?';
+    const nameParts = name.trim().split(' ').filter(Boolean);
+  
+    if (nameParts.length === 0) return '?';
+    if (nameParts.length === 1) {
+      return nameParts[0].substring(0, 2).toUpperCase();
+    }
+    const firstInitial = nameParts[0][0];
+    const lastInitial = nameParts[nameParts.length - 1][0];
+    return `${firstInitial}${lastInitial}`.toUpperCase();
+  };
+
+  const initials = getInitials(name);
+
   return (
     <div className="relative">
         <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center p-2 rounded-lg transition-colors duration-300 hover:bg-gray-200/60">
@@ -122,8 +144,8 @@ const UserProfileActions = ({ name, role, isExpanded }) => {
                 transition={{ duration: 0.3 }}
                 className="ml-3 overflow-hidden text-left"
                 >
-                <p className="font-semibold text-sm text-sky-900 whitespace-nowrap">{name}</p>
-                <p className="text-xs text-gray-500 whitespace-nowrap">{role}</p>
+                <p className="font-semibold text-sm text-sky-900 truncate" title={name}>{name}</p>
+                <p className="text-xs text-gray-500 truncate" title={role}>{role}</p>
                 </motion.div>
             )}
             </AnimatePresence>
@@ -138,13 +160,13 @@ const UserProfileActions = ({ name, role, isExpanded }) => {
                     className={`absolute z-20 w-48 p-2 bg-white/90 backdrop-blur-md rounded-lg shadow-xl border border-gray-200 
                         ${isExpanded 
                             ? 'bottom-full left-0 right-0 mb-2' 
-                            : 'bottom-0 left-full ml-2'}`
+                            // [FIX] Posisi lebih ke atas dan hapus tombol settings
+                            : 'bottom-4 left-full ml-5'}` 
                     }
                 >
                     <NavLink to="/admin/profile" className="w-full flex items-center gap-2 p-2 text-sm text-gray-700 hover:bg-sky-100 rounded-md"><FiUser /> Profile</NavLink>
-                    <NavLink to="/admin/settings" className="w-full flex items-center gap-2 p-2 text-sm text-gray-700 hover:bg-sky-100 rounded-md"><FiSettings /> Settings</NavLink>
                     <div className="my-1 h-px bg-gray-200" />
-                    <NavLink to="/" className="w-full flex items-center gap-2 p-2 text-sm text-red-600 hover:bg-red-100 rounded-md"><FiLogOut /> Logout</NavLink>
+                    <button onClick={handleLogout} className="w-full flex items-center gap-2 p-2 text-sm text-red-600 hover:bg-red-100 rounded-md"><FiLogOut /> Logout</button>
                 </motion.div>
             )}
         </AnimatePresence>
@@ -159,23 +181,32 @@ const SystemStatusWidget = ({ isExpanded, isOnline }) => {
 
     useEffect(() => {
         const timer = setInterval(() => setTime(new Date()), 1000);
-        const latencyTimer = setInterval(() => setLatency(Math.floor(Math.random() * (45 - 20 + 1)) + 20), 2000);
+        
+        const measureLatency = () => {
+            const startTime = Date.now();
+            socket.emit('ping', () => {
+                const duration = Date.now() - startTime;
+                setLatency(duration);
+            });
+        };
+        const latencyTimer = setInterval(measureLatency, 3000);
+
         return () => { clearInterval(timer); clearInterval(latencyTimer); };
     }, []);
 
     return (
         <AnimatePresence>
             {isExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="my-4 pt-4 border-t border-gray-200/80 text-xs text-gray-500"
-                  >
-                    <div className="flex justify-between items-center"><div className="flex items-center gap-2"><FiClock /><span>Client Time</span></div><span>{time.toLocaleTimeString()}</span></div>
-                    <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-2"><FiWifi className="text-green-500"/><span>Ping</span></div><span className="font-mono">{latency} ms</span></div>
-                    <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-2">{isOnline ? <FiWifi className="text-green-500"/> : <FiWifiOff className="text-red-500" />}<span>Server Status</span></div><span className={`font-mono font-bold ${isOnline ? 'text-green-500' : 'text-red-500'}`}>{isOnline ? 'ONLINE' : 'OFFLINE'}</span></div>
-                  </motion.div>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="my-4 pt-4 border-t border-gray-200/80 text-xs text-gray-500"
+                    >
+                      <div className="flex justify-between items-center"><div className="flex items-center gap-2"><FiClock /><span>Client Time</span></div><span>{time.toLocaleTimeString()}</span></div>
+                      <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-2"><FiWifi className="text-green-500"/><span>Ping</span></div><span className="font-mono">{latency} ms</span></div>
+                      <div className="flex justify-between items-center mt-2"><div className="flex items-center gap-2">{isOnline ? <FiWifi className="text-green-500"/> : <FiWifiOff className="text-red-500" />}<span>Server Status</span></div><span className={`font-mono font-bold ${isOnline ? 'text-green-500' : 'text-red-500'}`}>{isOnline ? 'ONLINE' : 'OFFLINE'}</span></div>
+                    </motion.div>
             )}
         </AnimatePresence>
     )
@@ -184,6 +215,7 @@ const SystemStatusWidget = ({ isExpanded, isOnline }) => {
 // --- Komponen Utama Sidebar ---
 const Sidebar = ({ isExpanded }) => {
   const [isServerOnline, setIsServerOnline] = useState(socket.connected);
+  const [user, setUser] = useState({ name: 'Guest', role: 'Guest' });
 
   const menuItems = [
     { icon: FiLayout, text: 'Dashboard', to: '/admin/dashboard' },
@@ -202,6 +234,11 @@ const Sidebar = ({ isExpanded }) => {
   const navItemVariants = { visible: { opacity: 1, x: 0 }, hidden: { opacity: 0, x: -10 } };
 
   useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+
     const onConnect = () => setIsServerOnline(true);
     const onDisconnect = () => setIsServerOnline(false);
     socket.on('connect', onConnect);
@@ -218,7 +255,7 @@ const Sidebar = ({ isExpanded }) => {
     >
       <DottedBackground />
       <div className="absolute top-0 right-0 h-full w-1.5 bg-gradient-to-b from-sky-300 via-blue-500 to-purple-500 shadow-[0_0_20px_2px_#3b82f6] opacity-90 animate-pulse z-10"></div>
-      
+     
       <div className="flex items-center mb-6 p-3 z-10">
         <motion.div animate={{ scale: [1, 1.1, 1], filter: ['drop-shadow(0 0 4px #3b82f6)', 'drop-shadow(0 0 12px #3b82f6)', 'drop-shadow(0 0 4px #3b82f6)'] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}>
           <FaCloud className="text-4xl text-blue-500" />
@@ -234,7 +271,7 @@ const Sidebar = ({ isExpanded }) => {
 
       <div className="pt-4 border-t border-gray-200/80 z-10">
         <SystemStatusWidget isExpanded={isExpanded} isOnline={isServerOnline} />
-        <UserProfileActions name="Admin" role="Admin Role" isExpanded={isExpanded} />
+        <UserProfileActions name={user.name} role={user.role} isExpanded={isExpanded} />
       </div>
     </motion.aside>
   );
