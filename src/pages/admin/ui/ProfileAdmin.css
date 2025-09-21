@@ -1,0 +1,48 @@
+.profile-admin-page {
+    /* Latar belakang halaman yang bersih */
+    background-color: #f3f4f6; /* bg-gray-100 */
+    padding: 2rem;
+    min-height: 100%;
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.875rem; /* 14px */
+    font-weight: 600;
+    color: #4b5563; /* gray-600 */
+    margin-bottom: 0.5rem; /* 8px */
+}
+
+.form-input {
+    width: 100%;
+    padding-left: 2.75rem; /* 44px untuk ruang ikon */
+    padding-right: 1rem;
+    padding-top: 0.625rem; /* 10px */
+    padding-bottom: 0.625rem;
+    background-color: #ffffff; /* bg-white */
+    border: 1px solid #d1d5db; /* border-gray-300 */
+    border-radius: 0.5rem; /* rounded-lg */
+    color: #111827; /* text-gray-900 */
+    transition: all 0.2s ease-in-out;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #3b82f6; /* focus:border-blue-500 */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); /* custom focus ring */
+}
+
+/* [FIX] CSS untuk memposisikan ikon di dalam input */
+.form-icon {
+    position: absolute;
+    top: 50%;
+    left: 0.75rem; /* 12px */
+    transform: translateY(-50%);
+    color: #9ca3af; /* text-gray-400 */
+    z-index: 10;
+    pointer-events: none; /* Agar ikon tidak bisa diklik */
+}

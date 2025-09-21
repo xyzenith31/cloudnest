@@ -19,7 +19,8 @@
     "react-router-dom": "^7.9.1",
     "recharts": "^3.2.1",
     "socket.io-client": "^4.8.1",
-    "tailwindcss-filters": "^3.0.0"
+    "tailwindcss-filters": "^3.0.0",
+    "vanilla-tilt": "^1.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
