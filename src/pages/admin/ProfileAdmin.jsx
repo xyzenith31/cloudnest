@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // useRef ditambahkan
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiUser, FiMail, FiPhone, FiLock, FiEdit, FiUpload, FiSmile, FiTrash2,
@@ -9,9 +9,9 @@ import { CgDanger } from 'react-icons/cg';
 import { getUserById, updateUserWithAvatar } from '../../services/userService';
 import Notification from '../../components/Notification';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import CustomSelect from '../../components/CustomSelect'; // <-- IMPORT BARU
+import CustomSelect from '../../components/CustomSelect';
 
-// Komponen Input Field Kustom
+// Komponen Input Field Kustom (tidak ada perubahan)
 const InputField = ({ icon: Icon, name, label, ...props }) => (
   <div className="relative">
     <label htmlFor={name} className="block text-sm font-semibold text-gray-600 mb-1">{label}</label>
@@ -26,7 +26,7 @@ const InputField = ({ icon: Icon, name, label, ...props }) => (
   </div>
 );
 
-// Halaman Utama ProfileAdmin
+
 const ProfileAdmin = () => {
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
@@ -41,10 +41,13 @@ const ProfileAdmin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  // --- STATE BARU ---
   const [isDevicesModalOpen, setIsDevicesModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [selectedGender, setSelectedGender] = useState(null);
+  
+  // --- STATE & REF BARU UNTUK AUTO-UPLOAD AVATAR ---
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const avatarInputRef = useRef(null);
 
   const genderOptions = [
     { id: 1, name: 'Laki-laki', value: 'Male' },
@@ -73,7 +76,6 @@ const ProfileAdmin = () => {
           const userData = response.data;
           setUser(userData);
           setFormData({ ...userData, password: '', confirmPassword: '' });
-          // [FIX] Inisialisasi state untuk CustomSelect
           setSelectedGender(genderOptions.find(g => g.value === userData.gender) || null);
           if (userData.avatar) {
             setAvatarPreview(`http://localhost:3001/${userData.avatar}`);
@@ -89,24 +91,60 @@ const ProfileAdmin = () => {
   }, []);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-  
   const handleGenderChange = (selectedOption) => {
     setSelectedGender(selectedOption);
     setFormData({ ...formData, gender: selectedOption.value });
   };
+  
+  // --- [IMPROVED] FUNGSI BARU UNTUK MENANGANI UPDATE AVATAR ---
+  const handleAvatarUpdate = async (newAvatarFile) => {
+      setIsAvatarUploading(true);
+      const data = new FormData();
 
-  const handleFileChange = (e) => {
+      // Lampirkan data user yang ada, tapi tanpa password jika tidak diubah
+      Object.keys(formData).forEach(key => {
+          if (!['password', 'confirmPassword'].includes(key)) {
+              data.append(key, formData[key]);
+          }
+      });
+
+      if (newAvatarFile) {
+          data.append('avatar', newAvatarFile);
+      } else {
+          // [MODIFIED] Kirim sinyal hapus yang lebih jelas ke backend
+          data.append('deleteAvatar', 'true');
+      }
+
+      try {
+          const response = await updateUserWithAvatar(user._id, data);
+          const updatedUser = response.data;
+          setUser(updatedUser);
+          // Pastikan state formData juga diupdate dengan data terbaru
+          setFormData(prev => ({ ...prev, ...updatedUser, password: '', confirmPassword: '' }));
+          if (updatedUser.avatar) {
+              setAvatarPreview(`http://localhost:3001/${updatedUser.avatar}`);
+          } else {
+              setAvatarPreview(null);
+          }
+          setNotification({ message: 'Foto profil berhasil diperbarui!', type: 'success' });
+      } catch (error) {
+          setNotification({ message: error.response?.data?.message || "Gagal memperbarui foto profil", type: 'error' });
+      } finally {
+          setIsAvatarUploading(false);
+      }
+  };
+
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
+      setAvatarPreview(URL.createObjectURL(file)); // Langsung tampilkan preview
+      await handleAvatarUpdate(file); // Langsung upload
     }
   };
 
-  const handleDeleteAvatar = () => {
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    setNotification({ message: 'Foto profil akan dihapus saat disimpan.', type: 'info' });
+  const handleDeleteAvatar = async () => {
+    setAvatarPreview(null); // Langsung hapus preview
+    await handleAvatarUpdate(null); // Langsung kirim perintah hapus
   };
 
   const handleSubmit = (e) => {
@@ -115,15 +153,12 @@ const ProfileAdmin = () => {
       setNotification({ message: 'Konfirmasi password tidak cocok', type: 'error' });
       return;
     }
-    // Buka modal konfirmasi, bukan langsung simpan
     setIsConfirmModalOpen(true);
   };
   
-  // Fungsi baru untuk eksekusi penyimpanan
   const executeSave = async () => {
     setIsSaving(true);
-    setIsConfirmModalOpen(false); // Tutup modal konfirmasi
-    
+    setIsConfirmModalOpen(false);
     const data = new FormData();
     const { confirmPassword, ...dataToSubmit } = formData;
     Object.keys(dataToSubmit).forEach(key => {
@@ -158,42 +193,51 @@ const ProfileAdmin = () => {
     <>
       <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
       <motion.div variants={pageVariants} initial="initial" animate="in" exit="out" className="min-h-screen flex flex-col">
-        {/* Header */}
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
             <div>
               <h1 className="text-4xl font-bold text-gray-800 tracking-tight">Pengaturan Profil</h1>
               <p className="text-gray-500 mt-1">Perbarui foto dan detail personal Anda di sini.</p>
             </div>
-            <motion.button form="profile-form" type="submit" disabled={isSaving} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 disabled:bg-blue-300 flex items-center justify-center min-w-[180px]">
+            <motion.button form="profile-form" type="submit" disabled={isSaving || isAvatarUploading} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
+              className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center min-w-[180px]">
               {isSaving ? <LoadingSpinner /> : <><FiSave className="mr-2"/> Simpan Perubahan</>}
             </motion.button>
         </motion.div>
         
-        {/* [MODIFIED] Layout utama dibuat "stretch" */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-            {/* [MODIFIED] Kolom kiri dibuat flex */}
             <div className="lg:col-span-1 flex flex-col space-y-8">
                 <motion.div variants={itemVariants} className="h-full">
                   <div className="bg-white p-6 rounded-2xl shadow-lg border text-center h-full flex flex-col">
+                      {/* --- [IMPROVED] AREA AVATAR DENGAN EFEK LOADING --- */}
                       <div className="relative w-32 h-32 mx-auto group">
                           <motion.img key={avatarPreview} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                             src={avatarPreview || `https://ui-avatars.com/api/?name=${formData.name}&background=e0f2fe&color=0284c7&size=128&bold=true`}
                             alt="Avatar" className="w-full h-full rounded-full object-cover border-4 border-white shadow-xl"
                           />
-                          <label htmlFor="avatar-upload" className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                          <label onClick={() => !isAvatarUploading && avatarInputRef.current.click()} className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                               <FiUpload className="text-white text-3xl" />
                           </label>
-                          <input id="avatar-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/png, image/jpeg" />
+                          <input ref={avatarInputRef} id="avatar-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/png, image/jpeg" />
+                          
+                          <AnimatePresence>
+                            {isAvatarUploading && (
+                                <motion.div
+                                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                    className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center"
+                                >
+                                    <LoadingSpinner />
+                                </motion.div>
+                            )}
+                          </AnimatePresence>
                       </div>
                       <h2 className="text-2xl font-bold text-gray-800 mt-4">{formData.name}</h2>
                       <p className="text-gray-500">@{formData.username}</p>
                       <div className="flex justify-center gap-3 mt-4">
-                          <label htmlFor="avatar-upload" className="px-4 py-2 text-sm font-semibold bg-sky-100 text-sky-800 rounded-lg cursor-pointer hover:bg-sky-200 flex items-center gap-2">
+                          <button onClick={() => avatarInputRef.current.click()} disabled={isAvatarUploading} className="px-4 py-2 text-sm font-semibold bg-sky-100 text-sky-800 rounded-lg cursor-pointer hover:bg-sky-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait">
                               <FiUpload /> Ubah Foto
-                          </label>
+                          </button>
                           {avatarPreview && (
-                            <button onClick={handleDeleteAvatar} className="px-4 py-2 text-sm font-semibold bg-red-100 text-red-800 rounded-lg hover:bg-red-200 flex items-center gap-2">
+                            <button onClick={handleDeleteAvatar} disabled={isAvatarUploading} className="px-4 py-2 text-sm font-semibold bg-red-100 text-red-800 rounded-lg hover:bg-red-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait">
                               <FiTrash2 /> Hapus
                             </button>
                           )}
@@ -201,7 +245,6 @@ const ProfileAdmin = () => {
                       <div className="mt-6 pt-6 border-t text-left text-sm text-gray-600 space-y-3 flex-grow">
                           <p className="flex items-center gap-3"><FiMail className="text-gray-400"/> {formData.email}</p>
                           <p className="flex items-center gap-3"><FiPhone className="text-gray-400"/> {formData.noHp}</p>
-                          {/* [FIX] Tanggal bergabung diperbaiki */}
                           <p className="flex items-center gap-3"><FiCalendar className="text-gray-400"/> Bergabung pada {user && user.createdAt ? new Date(user.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</p>
                       </div>
                   </div>
@@ -222,8 +265,8 @@ const ProfileAdmin = () => {
                 </motion.div>
             </div>
 
-            {/* Kolom Kanan */}
             <motion.form id="profile-form" onSubmit={handleSubmit} variants={itemVariants} className="lg:col-span-2 flex flex-col space-y-8">
+                {/* Sisanya sama... */}
                 <div className="bg-white p-8 rounded-2xl shadow-lg border h-full">
                     <h3 className="text-xl font-bold text-gray-800 mb-6">Informasi Personal</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -232,7 +275,6 @@ const ProfileAdmin = () => {
                         <InputField icon={FiMail} label="Email" name="email" value={formData.email} onChange={handleChange} />
                         <InputField icon={FiPhone} label="No. HP" name="noHp" value={formData.noHp} onChange={handleChange} />
                         <InputField icon={FiSmile} label="Umur" name="age" type="number" value={formData.age} onChange={handleChange} />
-                        {/* [MODIFIED] Menggunakan CustomSelect */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-600 mb-1">Gender</label>
                             <CustomSelect
@@ -271,11 +313,11 @@ const ProfileAdmin = () => {
         </div>
       </motion.div>
       
-      {/* Modal Daftar Perangkat */}
+      {/* Semua Modal (tidak ada perubahan signifikan kecuali styling di 'Kelola Sesi') */}
+      <AnimatePresence>{/* ... modal-modal lainnya ... */}</AnimatePresence>
       <AnimatePresence>
         {isDevicesModalOpen && (
             <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 p-4">
-              {/* [MODIFIED] Modal diperbesar */}
               <motion.div initial={{scale:0.9, y:20}} animate={{scale:1, y:0}} exit={{scale:0.9, y:20}} className="bg-white rounded-xl shadow-2xl w-full max-w-2xl">
                 <div className="flex justify-between items-center p-5 border-b">
                   <h4 className="text-lg font-bold text-gray-800">Sesi Aktif ({devices.length})</h4>
@@ -303,8 +345,6 @@ const ProfileAdmin = () => {
             </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Modal Konfirmasi Hapus Device */}
       <AnimatePresence>
         {deviceToRemove && (
              <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -322,8 +362,6 @@ const ProfileAdmin = () => {
              </motion.div>
         )}
       </AnimatePresence>
-
-      {/* [MODAL BARU] Konfirmasi Simpan Perubahan */}
       <AnimatePresence>
         {isConfirmModalOpen && (
              <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
