@@ -76,6 +76,7 @@ const ProfileDropdown = ({ userName, userEmail }) => {
             </div>
 
             <div className="profile-links-new">
+                {/* [DIPERBAIKI] Pastikan link ini mengarah ke rute profil user */}
                 <NavLink to="/beranda/profile" className="profile-item-new">
                     <FiUser /><span>Profil Saya</span>
                 </NavLink>

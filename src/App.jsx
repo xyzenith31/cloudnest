@@ -17,13 +17,14 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import UserBeranda from './pages/users/UserBeranda.jsx';
 import MyFilesPage from './pages/users/MyFilesPage.jsx';
 import UploadPage from './pages/users/UploadFile.jsx';
+import ProfileUser from './pages/users/ProfileUser.jsx';
 
 // Admin Pages
 import AdminBeranda from './pages/admin/AdminDashboard.jsx';
-import ManajemenPengguna from './pages/admin/ManajemenPengguna.jsx'; // <-- IMPORT Diperbaiki
-import ProfileAdmin from './pages/admin/ProfileAdmin.jsx'; // <-- IMPORT BARU
+import ManajemenPengguna from './pages/admin/ManajemenPengguna.jsx';
+import ProfileAdmin from './pages/admin/ProfileAdmin.jsx';
 
-// Placeholder components (beberapa masih digunakan)
+// Placeholder components
 const ManageFiles = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Manajemen File</h1></div>;
 const CommunityPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Komunitas</h1></div>;
 const LogsPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Log Aktivitas</h1></div>;
@@ -46,7 +47,8 @@ function App() {
           <Route path="upload" element={<UploadPage />} />
           <Route path="community" element={<CommunityPage />} />
           <Route path="help" element={<HelpPage />} />
-          <Route path="profile" element={<ProfileAdmin />} /> {/* <-- ROUTE BARU untuk profil user */}
+          {/* [DIUBAH] Gunakan komponen ProfileUser di sini */}
+          <Route path="profile" element={<ProfileUser />} />
         </Route>
       </Route>
 
@@ -54,13 +56,11 @@ function App() {
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<AdminBeranda />} />
-          {/* [FIX] Menggunakan komponen yang benar, bukan placeholder */}
           <Route path="manage-users" element={<ManajemenPengguna />} />
           <Route path="manage-files" element={<ManageFiles />} />
           <Route path="community" element={<CommunityPage />} />
           <Route path="logs" element={<LogsPage />} />
           <Route path="help" element={<HelpPage />} />
-          {/* [FIX] Menambahkan route untuk profile admin */}
           <Route path="profile" element={<ProfileAdmin />} />
         </Route>
       </Route>
