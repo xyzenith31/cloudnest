@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // useRef ditambahkan
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiUser, FiMail, FiPhone, FiLock, FiEdit, FiUpload, FiSmile, FiTrash2,
@@ -6,12 +6,11 @@ import {
   FiSmartphone, FiLogOut, FiShield, FiX, FiAlertTriangle
 } from 'react-icons/fi';
 import { CgDanger } from 'react-icons/cg';
-import { getUserById, updateUserWithAvatar } from '../../services/userService';
+import { getUserById, updateUserWithAvatar, deleteDeviceSession } from '../../services/userService';
 import Notification from '../../components/Notification';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import CustomSelect from '../../components/CustomSelect';
 
-// Komponen Input Field Kustom (tidak ada perubahan)
 const InputField = ({ icon: Icon, name, label, ...props }) => (
   <div className="relative">
     <label htmlFor={name} className="block text-sm font-semibold text-gray-600 mb-1">{label}</label>
@@ -45,7 +44,6 @@ const ProfileAdmin = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [selectedGender, setSelectedGender] = useState(null);
   
-  // --- STATE & REF BARU UNTUK AUTO-UPLOAD AVATAR ---
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
   const avatarInputRef = useRef(null);
 
@@ -55,16 +53,19 @@ const ProfileAdmin = () => {
     { id: 3, name: 'Lainnya', value: 'Other' },
   ];
   
-  const [devices, setDevices] = useState([
-    { id: 1, name: 'Chrome on Windows', ip: '103.12.34.56', last_active: 'Saat ini aktif', icon: FiMonitor, current: true },
-    { id: 2, name: 'Safari on iPhone 14', ip: '182.45.67.89', last_active: '2 jam lalu', icon: FiSmartphone },
-  ]);
+  const [devices, setDevices] = useState([]);
   const [deviceToRemove, setDeviceToRemove] = useState(null);
 
-  const handleRemoveDevice = (device) => {
-    setDevices(devices.filter(d => d.id !== device.id));
-    setDeviceToRemove(null);
-    setNotification({ message: `Sesi pada ${device.name} berhasil dihentikan.`, type: 'success' });
+  const handleRemoveDevice = async (device) => {
+    try {
+        await deleteDeviceSession(user._id, device.deviceId);
+        setDevices(devices.filter(d => d.deviceId !== device.deviceId));
+        setNotification({ message: `Sesi pada ${device.device} berhasil dihentikan.`, type: 'success' });
+    } catch (error) {
+        setNotification({ message: 'Gagal menghapus sesi perangkat', type: 'error' });
+    } finally {
+        setDeviceToRemove(null);
+    }
   };
   
   useEffect(() => {
@@ -75,6 +76,7 @@ const ProfileAdmin = () => {
           const response = await getUserById(storedUser._id);
           const userData = response.data;
           setUser(userData);
+          setDevices(userData.loginSessions || []);
           setFormData({ ...userData, password: '', confirmPassword: '' });
           setSelectedGender(genderOptions.find(g => g.value === userData.gender) || null);
           if (userData.avatar) {
@@ -96,22 +98,17 @@ const ProfileAdmin = () => {
     setFormData({ ...formData, gender: selectedOption.value });
   };
   
-  // --- [IMPROVED] FUNGSI BARU UNTUK MENANGANI UPDATE AVATAR ---
   const handleAvatarUpdate = async (newAvatarFile) => {
       setIsAvatarUploading(true);
       const data = new FormData();
-
-      // Lampirkan data user yang ada, tapi tanpa password jika tidak diubah
       Object.keys(formData).forEach(key => {
           if (!['password', 'confirmPassword'].includes(key)) {
               data.append(key, formData[key]);
           }
       });
-
       if (newAvatarFile) {
           data.append('avatar', newAvatarFile);
       } else {
-          // [MODIFIED] Kirim sinyal hapus yang lebih jelas ke backend
           data.append('deleteAvatar', 'true');
       }
 
@@ -119,7 +116,6 @@ const ProfileAdmin = () => {
           const response = await updateUserWithAvatar(user._id, data);
           const updatedUser = response.data;
           setUser(updatedUser);
-          // Pastikan state formData juga diupdate dengan data terbaru
           setFormData(prev => ({ ...prev, ...updatedUser, password: '', confirmPassword: '' }));
           if (updatedUser.avatar) {
               setAvatarPreview(`http://localhost:3001/${updatedUser.avatar}`);
@@ -137,14 +133,14 @@ const ProfileAdmin = () => {
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setAvatarPreview(URL.createObjectURL(file)); // Langsung tampilkan preview
-      await handleAvatarUpdate(file); // Langsung upload
+      setAvatarPreview(URL.createObjectURL(file));
+      await handleAvatarUpdate(file);
     }
   };
 
   const handleDeleteAvatar = async () => {
-    setAvatarPreview(null); // Langsung hapus preview
-    await handleAvatarUpdate(null); // Langsung kirim perintah hapus
+    setAvatarPreview(null);
+    await handleAvatarUpdate(null);
   };
 
   const handleSubmit = (e) => {
@@ -208,7 +204,6 @@ const ProfileAdmin = () => {
             <div className="lg:col-span-1 flex flex-col space-y-8">
                 <motion.div variants={itemVariants} className="h-full">
                   <div className="bg-white p-6 rounded-2xl shadow-lg border text-center h-full flex flex-col">
-                      {/* --- [IMPROVED] AREA AVATAR DENGAN EFEK LOADING --- */}
                       <div className="relative w-32 h-32 mx-auto group">
                           <motion.img key={avatarPreview} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                             src={avatarPreview || `https://ui-avatars.com/api/?name=${formData.name}&background=e0f2fe&color=0284c7&size=128&bold=true`}
@@ -255,7 +250,7 @@ const ProfileAdmin = () => {
                         <h3 className="text-xl font-bold text-gray-800 mb-4">Perangkat Terhubung</h3>
                         {devices.find(d => d.current) && (
                             <p className="text-sm text-gray-500 mb-4">
-                                Saat ini aktif di <span className="font-semibold text-gray-700">{devices.find(d => d.current).name}</span>.
+                                Saat ini aktif di <span className="font-semibold text-gray-700">{devices.find(d => d.current).device}</span>.
                             </p>
                         )}
                         <motion.button onClick={() => setIsDevicesModalOpen(true)} whileTap={{scale: 0.98}} className="w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors">
@@ -266,7 +261,6 @@ const ProfileAdmin = () => {
             </div>
 
             <motion.form id="profile-form" onSubmit={handleSubmit} variants={itemVariants} className="lg:col-span-2 flex flex-col space-y-8">
-                {/* Sisanya sama... */}
                 <div className="bg-white p-8 rounded-2xl shadow-lg border h-full">
                     <h3 className="text-xl font-bold text-gray-800 mb-6">Informasi Personal</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -313,8 +307,6 @@ const ProfileAdmin = () => {
         </div>
       </motion.div>
       
-      {/* Semua Modal (tidak ada perubahan signifikan kecuali styling di 'Kelola Sesi') */}
-      <AnimatePresence>{/* ... modal-modal lainnya ... */}</AnimatePresence>
       <AnimatePresence>
         {isDevicesModalOpen && (
             <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 p-4">
@@ -325,12 +317,12 @@ const ProfileAdmin = () => {
                 </div>
                 <ul className="space-y-1 p-3 max-h-96 overflow-y-auto">
                 {devices.map(device => (
-                    <li key={device.id} className="flex items-center justify-between text-left p-3 hover:bg-gray-50 rounded-lg">
+                    <li key={device.deviceId} className="flex items-center justify-between text-left p-3 hover:bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-4">
-                            <device.icon className={`text-3xl flex-shrink-0 ${device.current ? 'text-green-500' : 'text-gray-500'}`}/>
+                            <FiMonitor className={`text-3xl flex-shrink-0 ${device.current ? 'text-green-500' : 'text-gray-500'}`}/>
                             <div>
-                                <p className="font-semibold text-gray-800">{device.name}</p>
-                                <p className={`text-sm ${device.current ? 'text-green-600' : 'text-gray-500'}`}>{device.last_active}</p>
+                                <p className="font-semibold text-gray-800">{device.device}</p>
+                                <p className={`text-sm ${device.current ? 'text-green-600' : 'text-gray-500'}`}>{device.current ? "Saat ini aktif" : `Terakhir aktif: ${new Date(device.last_active).toLocaleString()}`}</p>
                             </div>
                         </div>
                         {!device.current && (
@@ -353,7 +345,7 @@ const ProfileAdmin = () => {
                        <FiShield className="text-4xl text-red-500"/>
                    </div>
                    <h2 className="text-xl font-bold my-4">Hentikan Sesi Aktif?</h2>
-                   <p className="text-gray-600">Anda akan keluar dari <span className="font-semibold">{deviceToRemove.name}</span>. Anda harus login kembali pada perangkat tersebut.</p>
+                   <p className="text-gray-600">Anda akan keluar dari <span className="font-semibold">{deviceToRemove.device}</span>. Anda harus login kembali pada perangkat tersebut.</p>
                    <div className="flex justify-center gap-4 mt-6">
                        <motion.button onClick={() => setDeviceToRemove(null)} whileHover={{scale:1.05}} className="px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-semibold">Batal</motion.button>
                        <motion.button onClick={() => handleRemoveDevice(deviceToRemove)} whileHover={{scale:1.05}} className="px-6 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 font-semibold">Ya, Hentikan</motion.button>

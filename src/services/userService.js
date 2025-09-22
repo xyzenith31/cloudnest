@@ -85,3 +85,16 @@ export const updateUserWithAvatar = (userId, formData) => {
 export const banUser = (userId, banData) => {
   return axios.post(`${API_URL}/${userId}/ban`, banData, getAuthConfig());
 };
+
+/**
+ * [BARU] Menghapus sesi perangkat yang terhubung.
+ * @param {string} userId - ID pengguna.
+ * @param {string} deviceId - ID perangkat/sesi yang akan dihapus.
+ * @returns {Promise<object>} Pesan konfirmasi.
+ */
+export const deleteDeviceSession = (userId, deviceId) => {
+    return axios.delete(`${API_URL}/${userId}/sessions`, {
+        ...getAuthConfig(),
+        data: { deviceId }
+    });
+};
