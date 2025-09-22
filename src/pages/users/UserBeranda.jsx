@@ -1,13 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    FiSearch, FiStar, FiClock, FiTrash2, FiShare2, FiFile,
-    FiHardDrive, FiGrid, FiList, FiFolder, FiUploadCloud, FiBell, FiArrowRight, FiActivity, FiEdit
+    FiSearch, FiStar, FiClock, FiFile,
+    FiHardDrive, FiGrid, FiList, FiFolder, FiUploadCloud, FiBell, FiEdit, FiShare2, FiTrash2
 } from 'react-icons/fi';
 import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive } from 'react-icons/fa';
-// [BARU] Impor modal dari komponen
 import FileDetailModal from '../../components/FileDetailModal';
-
 
 // --- DATA DUMMY (DIPERBANYAK & DIPERKAYA UNTUK DEMO MODAL) ---
 const files = [
@@ -48,9 +46,8 @@ const getFileIcon = (type) => {
 const UserBeranda = () => {
   const [viewMode, setViewMode] = useState('list');
   const [searchTerm, setSearchTerm] = useState('');
-  // [BARU] State untuk modal
   const [selectedFile, setSelectedFile] = useState(null);
-  const [allFiles, setAllFiles] = useState(files); // State untuk mengelola data file
+  const [allFiles, setAllFiles] = useState(files);
 
   const filteredFiles = useMemo(() =>
     allFiles.filter(file =>
@@ -58,10 +55,9 @@ const UserBeranda = () => {
     ), [searchTerm, allFiles]
   );
 
-  // [BARU] Fungsi untuk menangani pembaruan file dari modal
   const handleUpdateFile = (updatedFile) => {
     setAllFiles(currentFiles => currentFiles.map(f => f.id === updatedFile.id ? updatedFile : f));
-    setSelectedFile(updatedFile); // Perbarui juga state file yang dipilih
+    setSelectedFile(updatedFile);
   };
 
   const containerVariants = {
@@ -78,7 +74,6 @@ const UserBeranda = () => {
     <>
       <div className="p-4 md:p-6 lg:p-8 space-y-8 overflow-hidden">
         
-        {/* --- EFEK GRADIENT BACKGROUND --- */}
         <motion.div
           className="fixed top-0 left-0 -z-10 w-full h-full bg-gradient-to-br from-sky-100 via-blue-50 to-gray-50"
           initial={{ opacity: 0 }}
@@ -93,8 +88,6 @@ const UserBeranda = () => {
           style={{ animationDelay: '2s' }}
         />
 
-
-        {/* --- HEADER --- */}
         <motion.div
           initial={{ opacity: 0, y: -40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -115,7 +108,6 @@ const UserBeranda = () => {
           </motion.button>
         </motion.div>
 
-        {/* --- QUICK STATS --- */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -128,12 +120,10 @@ const UserBeranda = () => {
           <StatCard icon={FiFolder} label="Total Folder" value="4" color="indigo" />
         </motion.div>
         
-        {/* --- LAYOUT DUA KOLOM --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-              {/* --- DAFTAR FILE --- */}
               <motion.div variants={itemVariants} initial="hidden" animate="visible">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4">
+                  <div className="flex flex-col md:flex-row justify-between items-center mb-5 gap-4">
                       <h2 className="text-2xl font-semibold text-gray-700">File Terbaru</h2>
                       <div className='flex items-center gap-4 w-full md:w-auto'>
                           <div className="relative w-full md:w-auto flex-grow">
@@ -153,12 +143,9 @@ const UserBeranda = () => {
                       </div>
                   </div>
 
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence>
                       <motion.div
                         key={viewMode}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.3 }}
                         className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6' : 'space-y-3'}
                       >
@@ -173,7 +160,6 @@ const UserBeranda = () => {
           </div>
 
           <div className="lg:col-span-1 space-y-8">
-              {/* --- QUICK ACCESS --- */}
               <motion.div variants={itemVariants} initial="hidden" animate="visible">
                   <h2 className="text-2xl font-semibold text-gray-700 mb-4">Akses Cepat</h2>
                   <div className="grid grid-cols-2 gap-4">
@@ -193,7 +179,6 @@ const UserBeranda = () => {
                   </div>
               </motion.div>
 
-              {/* [PENINGKATAN] Aktivitas Terbaru dengan Card */}
               <motion.div variants={itemVariants} initial="hidden" animate="visible">
                   <h2 className="text-2xl font-semibold text-gray-700 mb-4">Aktivitas Terbaru</h2>
                   <div className="space-y-3">
@@ -218,7 +203,6 @@ const UserBeranda = () => {
         </div>
       </div>
       
-      {/* [BARU] Render Modal di luar layout utama */}
       <FileDetailModal 
         file={selectedFile} 
         onClose={() => setSelectedFile(null)} 
@@ -280,42 +264,37 @@ const StorageStatCard = ({ used, total, unit }) => {
 }
 
 // --- KOMPONEN ITEM FILE (LIST VIEW) ---
-// [PENINGKATAN] Tambahkan prop onSelect untuk membuka modal
 const FileListItem = ({ file, onSelect }) => (
     <motion.div
-      layout
+      layoutId={`file-card-${file.id}`}
+      // [ANIMASI] Transisi tipe spring untuk efek lebih natural
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
       variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
       exit={{ opacity: 0, y: -10 }}
       whileHover={{ scale: 1.015, boxShadow: '0px 10px 25px -10px rgba(0, 0, 0, 0.1)', borderColor: '#60a5fa' }}
-      className="bg-white/80 backdrop-blur-sm p-4 rounded-xl shadow-md border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300 cursor-pointer"
+      className="bg-white/80 backdrop-blur-sm p-4 rounded-xl shadow-md border flex items-center justify-between gap-4 transition-all duration-300 cursor-pointer"
       onClick={onSelect}
     >
-      <div className="flex items-center gap-4 w-full md:w-auto flex-grow">
+      <div className="flex items-center gap-4 flex-grow min-w-0">
         <div className="text-4xl">{getFileIcon(file.type)}</div>
-        <div>
-          <p className="font-semibold text-gray-800 break-all">{file.name}</p>
+        <div className='flex-grow min-w-0'>
+          <p className="font-semibold text-gray-800 truncate">{file.name}</p>
           <p className="text-sm text-gray-500">{file.size}</p>
         </div>
       </div>
-      <div className="flex items-center justify-between w-full md:w-auto md:gap-6 text-gray-500 mt-2 md:mt-0">
-        <div className="flex items-center gap-2 text-sm">
+      <div className="flex items-center gap-2 text-sm text-gray-500">
           <FiClock />
           <span>{file.lastModified}</span>
-        </div>
-        <div className="flex items-center gap-1 md:gap-2 text-lg">
-          <ActionButton icon={FiStar} isStarred={file.starred} onClick={(e) => { e.stopPropagation(); alert('Toggle Star'); }}/>
-          <ActionButton icon={FiShare2} onClick={(e) => { e.stopPropagation(); alert('Share File'); }}/>
-          <ActionButton icon={FiTrash2} isDelete onClick={(e) => { e.stopPropagation(); alert('Delete File'); }}/>
-        </div>
       </div>
     </motion.div>
 );
 
 // --- KOMPONEN ITEM FILE (GRID VIEW) ---
-// [PENINGKATAN] Tambahkan prop onSelect untuk membuka modal
 const FileGridItem = ({ file, onSelect }) => (
     <motion.div
-        layout
+        layoutId={`file-card-${file.id}`}
+        // [ANIMASI] Transisi tipe spring untuk efek lebih natural
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
         variants={{ hidden: { y: 20, opacity: 0, scale: 0.9 }, visible: { y: 0, opacity: 1, scale: 1 } }}
         exit={{ opacity: 0, scale: 0.9 }}
         whileHover={{ y: -10, boxShadow: '0px 15px 30px -10px rgba(0, 0, 0, 0.15)', transition: { type: 'spring', stiffness: 300 } }}
@@ -329,28 +308,7 @@ const FileGridItem = ({ file, onSelect }) => (
             <FiClock size={12} />
             <span>{file.lastModified}</span>
         </div>
-         <div className="flex items-center gap-2 mt-4 text-xl">
-          <ActionButton icon={FiStar} isStarred={file.starred} onClick={(e) => { e.stopPropagation(); alert('Toggle Star'); }}/>
-          <ActionButton icon={FiShare2} onClick={(e) => { e.stopPropagation(); alert('Share File'); }}/>
-          <ActionButton icon={FiTrash2} isDelete onClick={(e) => { e.stopPropagation(); alert('Delete File'); }}/>
-        </div>
     </motion.div>
-);
-
-// --- KOMPONEN TOMBOL AKSI ---
-// [PENINGKATAN] Tambahkan prop onClick agar tidak mengganggu onSelect parent
-const ActionButton = ({ icon: Icon, isStarred, isDelete, onClick }) => (
-    <motion.button
-        onClick={onClick}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.85 }}
-        className={`p-2 rounded-full transition-colors duration-200
-            ${isStarred ? 'text-yellow-500 bg-yellow-100' : ''}
-            ${isDelete ? 'hover:bg-red-100 hover:text-red-600' : 'hover:bg-gray-200'}
-        `}
-    >
-        <Icon />
-    </motion.button>
 );
 
 export default UserBeranda;

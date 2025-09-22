@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FiImage, FiVideo, FiFileText, FiArchive, FiGrid, FiList, FiStar, FiCpu,
-    FiAperture, FiSearch, FiHardDrive, FiDownload, FiTrash2
+    FiAperture, FiSearch, FiHardDrive, FiDownload, FiTrash2, FiAlertTriangle, FiX
 } from 'react-icons/fi';
 import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid } from 'react-icons/fa';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
@@ -94,6 +94,45 @@ const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage }) => {
     );
 };
 
+// [BARU] Komponen Modal Konfirmasi
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, count }) => {
+    if (!isOpen) return null;
+  
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4"
+        >
+          <motion.div
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, y: 20 }}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 text-center"
+          >
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+              <FiAlertTriangle className="text-4xl text-red-500" />
+            </div>
+            <h2 className="text-xl font-bold my-4">Anda Yakin?</h2>
+            <p className="text-gray-600">
+              Anda akan menghapus <span className="font-semibold">{count} file</span>. Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex justify-center gap-4 mt-6">
+              <motion.button onClick={onClose} whileHover={{ scale: 1.05 }} className="px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-semibold">
+                Batal
+              </motion.button>
+              <motion.button onClick={onConfirm} whileHover={{ scale: 1.05 }} className="px-6 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 font-semibold">
+                Ya, Hapus
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
+
 const MyFilesPage = () => {
   const [files, setFiles] = useState(initialFiles);
   const [filter, setFilter] = useState('all');
@@ -101,6 +140,7 @@ const MyFilesPage = () => {
   const [sort, setSort] = useState({ by: 'date', order: 'desc' });
   const [selectedFile, setSelectedFile] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false); // State untuk modal konfirmasi
 
   const handleUpdateFile = (updatedFile) => {
     setFiles(files.map(f => f.id === updatedFile.id ? updatedFile : f));
@@ -126,10 +166,13 @@ const MyFilesPage = () => {
   };
 
   const handleDeleteAll = () => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus ${filteredAndSortedFiles.length} file ini?`)) {
-      setFiles(files.filter(file => !filteredAndSortedFiles.includes(file)));
-      alert('File terpilih telah dihapus. (fitur simulasi)');
-    }
+    setIsDeleteConfirmOpen(true);
+  };
+  
+  const executeDeleteAll = () => {
+    setFiles(files.filter(file => !filteredAndSortedFiles.includes(file)));
+    setIsDeleteConfirmOpen(false);
+    // Tambahkan notifikasi jika perlu
   };
 
   return (
@@ -186,6 +229,12 @@ const MyFilesPage = () => {
         </motion.div>
 
         <FileDetailModal file={selectedFile} onClose={() => setSelectedFile(null)} onUpdateFile={handleUpdateFile} />
+        <ConfirmationModal 
+          isOpen={isDeleteConfirmOpen}
+          onClose={() => setIsDeleteConfirmOpen(false)}
+          onConfirm={executeDeleteAll}
+          count={filteredAndSortedFiles.length}
+        />
       </main>
     </div>
   );
