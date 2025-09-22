@@ -2,19 +2,19 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiUser, FiMail, FiPhone, FiLock, FiSmile, FiEdit } from 'react-icons/fi';
-
 import Card from '../components/Card';
 import { CloudNestLogo } from '../components/Icons';
 import CustomSelect from '../components/CustomSelect';
 import Notification from '../components/Notification';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { registerUserApi } from '../services/authService'; // <-- Pastikan ini mengarah ke authService.js yang benar
+import { registerUserApi } from '../services/authService';
 
+// [PERBAIKAN] Opsi gender diubah ke Bahasa Indonesia
 const genderOptions = [
   { id: 0, name: 'Pilih Gender', value: '' },
-  { id: 1, name: 'Male', value: 'Male' },
-  { id: 2, name: 'Female', value: 'Female' },
-  { id: 3, name: 'Other', value: 'Other' },
+  { id: 1, name: 'Laki-laki', value: 'Male' },
+  { id: 2, name: 'Perempuan', value: 'Female' },
+  { id: 3, name: 'Lainnya', value: 'Other' },
 ];
 
 const RegisterPage = () => {
@@ -49,7 +49,6 @@ const RegisterPage = () => {
 
     const { password, confirmPassword } = formData;
     
-    // Validasi frontend dasar
     for (const key in formData) {
         if (!formData[key]) return handleValidationError(`${key} harus diisi`);
     }
@@ -117,16 +116,9 @@ const RegisterPage = () => {
         </Card>
       </div>
       <style>{`
-        .form-input{width:100%;padding-left:3rem;padding-right:1rem;padding-top:.75rem;padding-bottom:.75rem;background-color:#F3F4F6;border-radius:.5rem;color:#0c4a6e;transition:all .3s;border:1px solid #E5E7EB}
+        .form-input{width:100%;padding-left:3rem;padding-right:1rem;padding-top:.75rem;padding-bottom:.75rem;border-radius:.5rem;transition:all .3s;border:1px solid #E5E7EB}
         .form-input::placeholder{color:#6B7280}
-        .form-input:focus{outline:none;box-shadow:0 0 0 2px #3b82f6;border-color:#3b82f6}
-        .form-icon{
-            position:absolute;
-            top:.875rem;
-            left:1rem;
-            color:#9CA3AF;
-            z-index: 10; 
-        }
+        .form-icon{position:absolute;top:.875rem;left:1rem;color:#9CA3AF;z-index:10;}
       `}</style>
     </>
   );

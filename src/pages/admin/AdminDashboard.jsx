@@ -1,183 +1,196 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { 
-    FiUsers, FiFileText, FiHardDrive, FiActivity, FiArrowUp, FiArrowDown, 
-    FiFolder, FiClock, FiUploadCloud, FiServer, FiDatabase, FiShield,
-    FiShare2, FiCloud, FiMail, FiRefreshCw // [BARU] Menambahkan ikon baru
+import { motion, useInView, useAnimate } from 'framer-motion';
+import {
+    FiUsers, FiFileText, FiHardDrive, FiActivity, FiArrowUp, FiArrowDown,
+    FiServer, FiDatabase, FiUploadCloud, FiShield, FiTrendingUp, FiBarChart2
 } from 'react-icons/fi';
-import { 
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
     Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 
-// --- DATA DUMMY ---
+// --- [HOOK KUSTOM UNTUK ANIMASI ANGKA] ---
+const useCountUp = (target) => {
+    const [scope, animate] = useAnimate();
+    const isInView = useInView(scope, { once: true, margin: "-50px" });
+
+    React.useEffect(() => {
+        if (isInView) {
+            animate(0, target, {
+                duration: 1.5,
+                onUpdate: (latest) => {
+                    if (scope.current) {
+                        scope.current.textContent = Math.round(latest).toLocaleString('id-ID');
+                    }
+                }
+            });
+        }
+    }, [isInView, target, animate, scope]);
+
+    return scope;
+};
+
+// --- [DATA DUMMY] ---
 const stats = [
-    { icon: FiUsers, label: 'Total Pengguna', value: '1,250', growth: 15, color: 'blue' },
-    { icon: FiActivity, label: 'Pengguna Aktif', value: '312', growth: 5, color: 'teal' },
-    { icon: FiFileText, label: 'Total File', value: '5,420', growth: 8, color: 'green' },
-    { icon: FiUploadCloud, label: 'File Hari Ini', value: '128', growth: -10, color: 'sky' },
-    { icon: FiHardDrive, label: 'Penyimpanan', value: '50.5 GB', growth: 2, color: 'indigo' },
-    { icon: FiFolder, label: 'Total Folder', value: '890', growth: 7, color: 'purple' },
+    { icon: FiUsers, label: 'Total Pengguna', value: 1250, growth: 15, color: 'blue' },
+    { icon: FiFileText, label: 'Total File', value: 5420, growth: 8, color: 'green' },
+    { icon: FiHardDrive, label: 'Penyimpanan Total', value: 51712, unit: 'MB', growth: 2, color: 'indigo' },
+    { icon: FiActivity, label: 'Pengguna Aktif (24 Jam)', value: 312, growth: -5, color: 'sky' },
 ];
+// ... (sisa data dummy tetap sama) ...
 const chartData = [
     { name: 'Jan', Pengguna: 400, File: 240 }, { name: 'Feb', Pengguna: 300, File: 139 },
     { name: 'Mar', Pengguna: 500, File: 980 }, { name: 'Apr', Pengguna: 700, File: 390 },
     { name: 'Mei', Pengguna: 600, File: 480 }, { name: 'Jun', Pengguna: 800, File: 380 },
     { name: 'Jul', Pengguna: 900, File: 430 },
 ];
+
 const storageDistributionData = [
     { name: 'Dokumen', value: 400 }, { name: 'Gambar', value: 300 },
     { name: 'Video', value: 300 }, { name: 'Lainnya', value: 200 },
 ];
 const COLORS = ['#3b82f6', '#22c55e', '#ef4444', '#a855f7'];
-const recentActivities = [
-    { user: 'Donny Indra', action: 'mengunggah 2 file baru.', time: '10m lalu' },
-    { user: 'Siti Aminah', action: 'baru saja mendaftar.', time: '30m lalu' },
-    { user: 'Budi Santoso', action: 'menghapus folder "Lama".', time: '1j lalu' },
-];
-const recentUsers = [
-    { name: 'Siti Aminah', email: 'siti.a@example.com', time: '30 menit lalu' },
-    { name: 'Rizky Pratama', email: 'rizky.p@example.com', time: '2 jam lalu' },
-    { name: 'Dewi Lestari', email: 'dewi.l@example.com', time: '5 jam lalu' },
-];
-// [DIPERBARUI] Menambahkan 4 status sistem baru
+
 const systemStatus = [
     { name: 'Server Utama', status: 'Operational', icon: FiServer, color: 'green' },
     { name: 'Database', status: 'Operational', icon: FiDatabase, color: 'green' },
     { name: 'Server Upload', status: 'Latency Tinggi', icon: FiUploadCloud, color: 'orange' },
-    { name: 'Autentikasi', status: 'Operational', icon: FiShield, color: 'green' },
-    { name: 'API Gateway', status: 'Operational', icon: FiShare2, color: 'green' },
-    { name: 'CDN Service', status: 'Operational', icon: FiCloud, color: 'green' },
-    { name: 'Email Service', status: 'Maintenance', icon: FiMail, color: 'orange' },
-    { name: 'Backup System', status: 'Operational', icon: FiRefreshCw, color: 'green' },
+    { name: 'Sistem Autentikasi', status: 'Operational', icon: FiShield, color: 'green' },
 ];
 
-// Komponen Card Statistik
-const StatCard = ({ icon: Icon, label, value, growth, color }) => {
+// --- [KOMPONEN CARD STATISTIK (IKON DIPERBAIKI)] ---
+const StatCard = ({ icon: Icon, label, value, unit, growth, color }) => {
     const isPositive = growth >= 0;
+    const countUpRef = useCountUp(value);
+
+    // [PERBAIKAN] Mendefinisikan class warna secara eksplisit
+    const colorClasses = {
+        blue: 'from-blue-400 to-blue-600',
+        green: 'from-green-400 to-green-600',
+        indigo: 'from-indigo-400 to-indigo-600',
+        sky: 'from-sky-400 to-sky-600',
+    };
+    const statusColorClasses = {
+        green: 'text-green-500',
+        red: 'text-red-500'
+    };
+    const pulseColorClasses = {
+        green: 'bg-green-500',
+        orange: 'bg-orange-500'
+    }
+
     return (
       <motion.div
-        whileHover={{ scale: 1.05, y: -5 }}
+        whileHover={{ y: -8, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}
         transition={{ type: 'spring', stiffness: 300 }}
-        className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm flex items-center space-x-3"
+        className="bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl p-6 flex items-center space-x-4 shadow-lg"
       >
-        <div className={`p-3 rounded-lg bg-${color}-100 text-${color}-600`}><Icon className="w-6 h-6" /></div>
+        <div className={`p-4 rounded-full bg-gradient-to-br ${colorClasses[color] || colorClasses.blue} text-white shadow-md`}>
+            <Icon className="w-7 h-7" />
+        </div>
         <div>
-          <p className="text-gray-500 text-xs font-medium">{label}</p>
+          <p className="text-slate-500 font-medium">{label}</p>
           <div className="flex items-baseline space-x-2">
-            <h2 className="text-lg font-bold text-gray-800">{value}</h2>
-            <span className={`font-semibold text-xs flex items-center ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-              {isPositive ? <FiArrowUp size={12}/> : <FiArrowDown size={12}/>}
-              {Math.abs(growth)}%
-            </span>
+            <h2 ref={countUpRef} className="text-3xl font-bold text-slate-800">0</h2>
+            {unit && <span className="text-slate-600 font-semibold">{unit}</span>}
           </div>
+           <span className={`font-semibold text-sm flex items-center mt-1 ${isPositive ? statusColorClasses.green : statusColorClasses.red}`}>
+              {isPositive ? <FiArrowUp size={14} className="mr-1"/> : <FiArrowDown size={14} className="mr-1"/>}
+              {Math.abs(growth)}% vs bulan lalu
+            </span>
         </div>
       </motion.div>
     );
 };
 
-// Komponen Utama AdminBeranda
-const AdminBeranda = () => {
-    const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } };
-    const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } };
+
+// --- [KOMPONEN UTAMA DASHBOARD ADMIN] ---
+const AdminDashboard = () => {
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100 } }
+    };
 
     return (
-        <div className="p-4 md:p-6 space-y-6">
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-                <h1 className="text-3xl font-bold text-gray-800">Dasbor Admin</h1>
-                <p className="text-gray-500 mt-1">Selamat datang di pusat kendali CloudNest.</p>
+        <div className="p-2 md:p-4 space-y-8 bg-dots-slate-200">
+            {/* Header */}
+            <motion.div initial="hidden" animate="visible" variants={itemVariants}>
+                <h1 className="text-4xl font-bold text-slate-800">Dasbor Admin CloudNest</h1>
+                <p className="text-slate-500 mt-2 text-lg">Selamat datang kembali, Admin! Berikut adalah ringkasan aktivitas platform.</p>
             </motion.div>
             
-            <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" variants={containerVariants} initial="hidden" animate="visible">
-                {stats.map((stat, index) => <motion.div key={index} variants={itemVariants}><StatCard {...stat} /></motion.div>)}
+            {/* Grid Statistik Utama */}
+            <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
+                {stats.map((stat) => <StatCard key={stat.label} {...stat} />)}
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Grid Chart dan Status */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
-                {/* Kolom Kiri - 3/5 Lebar */}
-                <div className="lg:col-span-3 space-y-6">
-                    <motion.div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm" variants={itemVariants}>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Tren Pertumbuhan Platform</h3>
-                        <div className="h-[300px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
-                                    <YAxis axisLine={false} tickLine={false} fontSize={12} />
-                                    <Tooltip contentStyle={{ background: 'white', borderRadius: '8px', border: '1px solid #e5e7eb' }} />
-                                    <Legend wrapperStyle={{ fontSize: '14px' }} />
-                                    <defs>
-                                        <linearGradient id="colorPengguna" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
-                                        <linearGradient id="colorFile" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/><stop offset="95%" stopColor="#22c55e" stopOpacity={0}/></linearGradient>
-                                    </defs>
-                                    <Area type="monotone" dataKey="Pengguna" stroke="#3b82f6" fill="url(#colorPengguna)" strokeWidth={2.5} />
-                                    <Area type="monotone" dataKey="File" stroke="#22c55e" fill="url(#colorFile)" strokeWidth={2.5} />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </motion.div>
-                    <motion.div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm" variants={itemVariants}>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Status Sistem</h3>
-                        {/* [DIRAPIKAN] Mengubah layout grid agar muat 8 item */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {systemStatus.map(sys => (
-                                <div key={sys.name} className="flex flex-col items-center p-4 bg-gray-50 rounded-lg">
-                                    <sys.icon className={`w-8 h-8 ${sys.color === 'green' ? 'text-green-500' : 'text-orange-500'}`} />
-                                    <p className="text-sm font-semibold mt-2 text-gray-700 text-center">{sys.name}</p>
-                                    <p className={`text-xs font-bold ${sys.color === 'green' ? 'text-green-600' : 'text-orange-500'}`}>{sys.status}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-                </div>
+                {/* Kolom Kiri - Grafik Utama */}
+                <motion.div
+                    variants={itemVariants} initial="hidden" animate="visible"
+                    className="lg:col-span-2 bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-200/80 shadow-lg"
+                >
+                    <h3 className="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2"><FiTrendingUp /> Tren Pertumbuhan Platform</h3>
+                    <div className="h-[350px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" vertical={false} />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} />
+                                <YAxis axisLine={false} tickLine={false} fontSize={12} />
+                                <Tooltip contentStyle={{ background: 'white', borderRadius: '12px', border: '1px solid #e5e7eb' }} />
+                                <Legend wrapperStyle={{ fontSize: '14px' }} />
+                                <defs>
+                                    <linearGradient id="colorPengguna" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
+                                    <linearGradient id="colorFile" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#22c55e" stopOpacity={0.4}/><stop offset="95%" stopColor="#22c55e" stopOpacity={0}/></linearGradient>
+                                </defs>
+                                <Area type="monotone" dataKey="Pengguna" stroke="#3b82f6" fill="url(#colorPengguna)" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 8 }}/>
+                                <Area type="monotone" dataKey="File" stroke="#22c55e" fill="url(#colorFile)" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 8 }}/>
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </motion.div>
 
-                {/* Kolom Kanan - 2/5 Lebar */}
-                <div className="lg:col-span-2 space-y-6">
-                    <motion.div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm" variants={itemVariants}>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Distribusi Penyimpanan</h3>
+                {/* Kolom Kanan - Distribusi & Status */}
+                <div className="space-y-8">
+                    <motion.div variants={itemVariants} initial="hidden" animate="visible" className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-200/80 shadow-lg">
+                        <h3 className="text-xl font-semibold text-slate-800 mb-2 flex items-center gap-2"><FiBarChart2 /> Distribusi Penyimpanan</h3>
                         <div className="h-[180px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={storageDistributionData} innerRadius={50} outerRadius={70} fill="#8884d8" paddingAngle={5} dataKey="value" nameKey="name">
+                                    <Pie data={storageDistributionData} innerRadius={60} outerRadius={80} fill="#8884d8" paddingAngle={5} dataKey="value" nameKey="name">
                                         {storageDistributionData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                                     </Pie>
                                     <Tooltip />
-                                    <Legend iconType="circle" layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: '14px' }}/>
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
                     </motion.div>
-                    <motion.div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm" variants={itemVariants}>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Pengguna Terbaru</h3>
-                        <ul className="space-y-4">
-                            {recentUsers.map((user, i) => (
-                                <li key={i} className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 font-bold flex-shrink-0 flex items-center justify-center text-sm">
-                                        {user.name.split(' ').map(n => n[0]).join('')}
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-gray-800 text-sm">{user.name}</p>
-                                        <p className="text-xs text-gray-500">{user.email}</p>
-                                    </div>
-                                    <span className="text-xs text-gray-400 ml-auto">{user.time}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </motion.div>
-                    <motion.div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm" variants={itemVariants}>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Aktivitas Terbaru</h3>
-                        <ul className="space-y-4">
-                            {recentActivities.map((activity, i) => (
-                                <li key={i} className="flex items-start gap-3">
-                                    <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center bg-gray-100 rounded-full mt-0.5">
-                                        <FiClock className="text-gray-500" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm text-gray-700 leading-tight">
-                                            <span className="font-semibold text-gray-900">{activity.user}</span> {activity.action}
-                                        </p>
-                                    </div>
-                                    <span className="text-xs text-gray-400 ml-auto whitespace-nowrap">{activity.time}</span>
+                    <motion.div variants={itemVariants} initial="hidden" animate="visible" className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-slate-200/80 shadow-lg">
+                        <h3 className="text-xl font-semibold text-slate-800 mb-4">Status Sistem</h3>
+                        <ul className="space-y-3">
+                            {systemStatus.map(sys => (
+                                <li key={sys.name} className="flex items-center justify-between">
+                                    <span className="flex items-center gap-3">
+                                        {/* [PERBAIKAN] Class warna di sini juga diperbaiki */}
+                                        <sys.icon className={`w-5 h-5 ${sys.color === 'green' ? 'text-green-500' : 'text-orange-500'}`} />
+                                        <p className="font-medium text-slate-700">{sys.name}</p>
+                                    </span>
+                                    <span className={`flex items-center gap-2 text-sm font-bold ${sys.color === 'green' ? 'text-green-600' : 'text-orange-500'}`}>
+                                        <span className={`h-2 w-2 rounded-full ${sys.color === 'green' ? 'bg-green-500' : 'bg-orange-500'} animate-pulse`}></span>
+                                        {sys.status}
+                                    </span>
                                 </li>
                             ))}
                         </ul>
@@ -188,4 +201,4 @@ const AdminBeranda = () => {
     );
 };
 
-export default AdminBeranda;
+export default AdminDashboard;
