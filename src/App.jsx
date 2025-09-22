@@ -7,7 +7,7 @@ import UserLayout from './layouts/UserLayout.jsx';
 import AuthLayout from './layouts/AuthLayout.jsx';
 
 // Components
-import ProtectedRoute from './components/ProtectedRoute.jsx'; // <-- IMPORT BARU
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 // Auth Pages
 import LoginPage from './pages/LoginPage.jsx';
@@ -20,15 +20,14 @@ import UploadPage from './pages/users/UploadFile.jsx';
 
 // Admin Pages
 import AdminBeranda from './pages/admin/AdminDashboard.jsx';
+import ManajemenPengguna from './pages/admin/ManajemenPengguna.jsx'; // <-- IMPORT Diperbaiki
+import ProfileAdmin from './pages/admin/ProfileAdmin.jsx'; // <-- IMPORT BARU
 
-// Placeholder components
-const ManageUsers = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Manajemen Pengguna</h1></div>;
+// Placeholder components (beberapa masih digunakan)
 const ManageFiles = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Manajemen File</h1></div>;
 const CommunityPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Komunitas</h1></div>;
 const LogsPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Log Aktivitas</h1></div>;
 const HelpPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Bantuan</h1></div>;
-const ProfilePage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Profil</h1></div>;
-
 
 function App() {
   return (
@@ -47,7 +46,7 @@ function App() {
           <Route path="upload" element={<UploadPage />} />
           <Route path="community" element={<CommunityPage />} />
           <Route path="help" element={<HelpPage />} />
-          <Route path="profile" element={<ProfilePage />} />
+          <Route path="profile" element={<ProfileAdmin />} /> {/* <-- ROUTE BARU untuk profil user */}
         </Route>
       </Route>
 
@@ -55,11 +54,14 @@ function App() {
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<AdminBeranda />} />
-          <Route path="manage-users" element={<ManageUsers />} />
+          {/* [FIX] Menggunakan komponen yang benar, bukan placeholder */}
+          <Route path="manage-users" element={<ManajemenPengguna />} />
           <Route path="manage-files" element={<ManageFiles />} />
           <Route path="community" element={<CommunityPage />} />
           <Route path="logs" element={<LogsPage />} />
           <Route path="help" element={<HelpPage />} />
+          {/* [FIX] Menambahkan route untuk profile admin */}
+          <Route path="profile" element={<ProfileAdmin />} />
         </Route>
       </Route>
 

@@ -1,11 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUser, FiMail, FiPhone, FiLock, FiEdit, FiUpload, FiSmile, FiTrash2, FiUsers, FiCheck } from 'react-icons/fi';
+import {
+  FiUser, FiMail, FiPhone, FiLock, FiEdit, FiUpload, FiSmile, FiTrash2,
+  FiUsers, FiCheck, FiSave, FiEye, FiEyeOff, FiCalendar, FiMonitor,
+  FiSmartphone, FiLogOut, FiShield, FiX, FiAlertTriangle
+} from 'react-icons/fi';
 import { CgDanger } from 'react-icons/cg';
 import { getUserById, updateUserWithAvatar } from '../../services/userService';
 import Notification from '../../components/Notification';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import CustomSelect from '../../components/CustomSelect'; // <-- IMPORT BARU
 
+// Komponen Input Field Kustom
+const InputField = ({ icon: Icon, name, label, ...props }) => (
+  <div className="relative">
+    <label htmlFor={name} className="block text-sm font-semibold text-gray-600 mb-1">{label}</label>
+    <div className="relative">
+      <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <motion.input
+        id={name} name={name} whileFocus={{ boxShadow: "0 0 0 2px #60a5fa" }}
+        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-400 transition-colors"
+        {...props}
+      />
+    </div>
+  </div>
+);
+
+// Halaman Utama ProfileAdmin
 const ProfileAdmin = () => {
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
@@ -14,11 +35,35 @@ const ProfileAdmin = () => {
   });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
-  const [isAvatarDeleted, setIsAvatarDeleted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [notification, setNotification] = useState({ message: '', type: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // --- STATE BARU ---
+  const [isDevicesModalOpen, setIsDevicesModalOpen] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [selectedGender, setSelectedGender] = useState(null);
 
+  const genderOptions = [
+    { id: 1, name: 'Laki-laki', value: 'Male' },
+    { id: 2, name: 'Perempuan', value: 'Female' },
+    { id: 3, name: 'Lainnya', value: 'Other' },
+  ];
+  
+  const [devices, setDevices] = useState([
+    { id: 1, name: 'Chrome on Windows', ip: '103.12.34.56', last_active: 'Saat ini aktif', icon: FiMonitor, current: true },
+    { id: 2, name: 'Safari on iPhone 14', ip: '182.45.67.89', last_active: '2 jam lalu', icon: FiSmartphone },
+  ]);
+  const [deviceToRemove, setDeviceToRemove] = useState(null);
+
+  const handleRemoveDevice = (device) => {
+    setDevices(devices.filter(d => d.id !== device.id));
+    setDeviceToRemove(null);
+    setNotification({ message: `Sesi pada ${device.name} berhasil dihentikan.`, type: 'success' });
+  };
+  
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -28,6 +73,8 @@ const ProfileAdmin = () => {
           const userData = response.data;
           setUser(userData);
           setFormData({ ...userData, password: '', confirmPassword: '' });
+          // [FIX] Inisialisasi state untuk CustomSelect
+          setSelectedGender(genderOptions.find(g => g.value === userData.gender) || null);
           if (userData.avatar) {
             setAvatarPreview(`http://localhost:3001/${userData.avatar}`);
           }
@@ -42,27 +89,40 @@ const ProfileAdmin = () => {
   }, []);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  
+  const handleGenderChange = (selectedOption) => {
+    setSelectedGender(selectedOption);
+    setFormData({ ...formData, gender: selectedOption.value });
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
-      setIsAvatarDeleted(false);
     }
   };
+
   const handleDeleteAvatar = () => {
     setAvatarFile(null);
     setAvatarPreview(null);
-    setIsAvatarDeleted(true);
     setNotification({ message: 'Foto profil akan dihapus saat disimpan.', type: 'info' });
   };
-  const handleSubmit = async (e) => {
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (formData.password && formData.password !== formData.confirmPassword) {
       setNotification({ message: 'Konfirmasi password tidak cocok', type: 'error' });
       return;
     }
+    // Buka modal konfirmasi, bukan langsung simpan
+    setIsConfirmModalOpen(true);
+  };
+  
+  // Fungsi baru untuk eksekusi penyimpanan
+  const executeSave = async () => {
     setIsSaving(true);
+    setIsConfirmModalOpen(false); // Tutup modal konfirmasi
     
     const data = new FormData();
     const { confirmPassword, ...dataToSubmit } = formData;
@@ -71,7 +131,6 @@ const ProfileAdmin = () => {
       if (dataToSubmit[key] !== null) data.append(key, dataToSubmit[key]);
     });
     if (avatarFile) data.append('avatar', avatarFile);
-    else if (isAvatarDeleted) data.append('avatar', ''); 
     
     try {
         const response = await updateUserWithAvatar(user._id, data);
@@ -81,165 +140,208 @@ const ProfileAdmin = () => {
         setFormData({ ...updatedUser, password: '', confirmPassword: '' });
         if (updatedUser.avatar) setAvatarPreview(`http://localhost:3001/${updatedUser.avatar}`);
         else setAvatarPreview(null);
-        setIsAvatarDeleted(false);
     } catch (error) {
-        const message = error.response?.data?.message || "Gagal memperbarui profil";
-        setNotification({ message, type: 'error' });
+        setNotification({ message: error.response?.data?.message || "Gagal memperbarui profil", type: 'error' });
     } finally {
         setIsSaving(false);
     }
   };
 
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-full"><LoadingSpinner /></div>;
-  }
+  if (isLoading) return <div className="flex justify-center items-center h-screen"><LoadingSpinner /></div>;
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.07 } }
-  };
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } }
-  };
-
+  const pageVariants = { initial: { opacity: 0 }, in: { opacity: 1, transition: { staggerChildren: 0.1 } }, out: { opacity: 0 }};
+  const itemVariants = { initial: { y: 20, opacity: 0 }, in: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100 } }};
   const passwordsMatch = formData.password && formData.confirmPassword && formData.password === formData.confirmPassword;
   const passwordsDoNotMatch = formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword;
 
   return (
-    <div className="profile-admin-page">
+    <>
       <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
-      <form onSubmit={handleSubmit}>
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+      <motion.div variants={pageVariants} initial="initial" animate="in" exit="out" className="min-h-screen flex flex-col">
+        {/* Header */}
+        <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">Profil Saya</h1>
-              <p className="text-gray-500 mt-1">Kelola informasi akun dan preferensi Anda di sini.</p>
+              <h1 className="text-4xl font-bold text-gray-800 tracking-tight">Pengaturan Profil</h1>
+              <p className="text-gray-500 mt-1">Perbarui foto dan detail personal Anda di sini.</p>
             </div>
-            <motion.button type="submit" disabled={isSaving} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
-              className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 hover:shadow-blue-300 transition-all duration-300 disabled:bg-blue-300 disabled:shadow-none flex items-center justify-center min-w-[180px]">
-              {isSaving ? <LoadingSpinner /> : 'Simpan Perubahan'}
+            <motion.button form="profile-form" type="submit" disabled={isSaving} whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: 0.95 }}
+              className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg hover:bg-blue-700 disabled:bg-blue-300 flex items-center justify-center min-w-[180px]">
+              {isSaving ? <LoadingSpinner /> : <><FiSave className="mr-2"/> Simpan Perubahan</>}
             </motion.button>
-          </motion.div>
-
-          <motion.div variants={itemVariants} className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative group">
-              <AnimatePresence mode="wait">
-                <motion.img
-                  key={avatarPreview || formData.name}
-                  initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} transition={{ duration: 0.3 }}
-                  src={avatarPreview || `https://ui-avatars.com/api/?name=${formData.name}&background=e0f2fe&color=0284c7&size=128&bold=true`}
-                  alt="Avatar"
-                  className="w-28 h-28 rounded-full object-cover border-4 border-white shadow-md transition-all duration-300 group-hover:brightness-90"
-                />
-              </AnimatePresence>
-              <label htmlFor="avatar-upload" className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer">
-                  <FiUpload className="text-white text-3xl" />
-              </label>
-            </div>
-            <div className="text-center sm:text-left">
-              <h2 className="text-2xl font-bold text-gray-800">{formData.name}</h2>
-              <p className="text-gray-500">@{formData.username}</p>
-              <div className="flex gap-3 mt-4">
-                <label htmlFor="avatar-upload" className="px-4 py-2 text-sm font-semibold bg-sky-100 text-sky-800 rounded-lg cursor-pointer hover:bg-sky-200 transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
-                    <FiUpload /> Ubah Foto
-                </label>
-                <input id="avatar-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/png, image/jpeg" />
-                {(avatarPreview || user?.avatar) && (
-                  <motion.button type="button" onClick={handleDeleteAvatar} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                    className="px-4 py-2 text-sm font-semibold bg-red-100 text-red-800 rounded-lg hover:bg-red-200 transition-colors flex items-center gap-2">
-                    <FiTrash2 /> Hapus
-                  </motion.button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div variants={itemVariants} className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-              <div><label className="form-label">Nama Lengkap</label><div className="input-wrapper"><FiEdit className="form-icon" /><input name="name" type="text" className="form-input" value={formData.name} onChange={handleChange} /></div></div>
-              <div><label className="form-label">Username</label><div className="input-wrapper"><FiUser className="form-icon" /><input name="username" type="text" className="form-input" value={formData.username} onChange={handleChange} /></div></div>
-              <div><label className="form-label">Email</label><div className="input-wrapper"><FiMail className="form-icon" /><input name="email" type="email" className="form-input" value={formData.email} onChange={handleChange} /></div></div>
-              <div><label className="form-label">No. HP</label><div className="input-wrapper"><FiPhone className="form-icon" /><input name="noHp" type="tel" className="form-input" value={formData.noHp} onChange={handleChange} /></div></div>
-              <div><label className="form-label">Umur</label><div className="input-wrapper"><FiSmile className="form-icon" /><input name="age" type="number" className="form-input" value={formData.age} onChange={handleChange} /></div></div>
-              <div><label className="form-label">Gender</label><div className="input-wrapper"><FiUsers className="form-icon" /><select name="gender" value={formData.gender} onChange={handleChange} className="form-input w-full appearance-none"><option value="">Pilih Gender</option><option value="Male">Laki-laki</option><option value="Female">Perempuan</option><option value="Other">Lainnya</option></select></div></div>
-            </div>
-            <hr />
-            <div>
-              <h3 className="text-lg font-bold text-gray-700 mb-4">Ubah Password</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                <div>
-                    <label className="form-label">Password Baru</label>
-                    <div className="input-wrapper">
-                        <FiLock className="form-icon" />
-                        <input name="password" placeholder="Kosongkan jika tidak diubah" type="password" className="form-input" value={formData.password} onChange={handleChange} />
-                    </div>
-                </div>
-                <div>
-                    <label className="form-label">Konfirmasi Password Baru</label>
-                    <div className="input-wrapper">
-                        <FiLock className="form-icon" />
-                        <input name="confirmPassword" placeholder="Ulangi password baru" type="password" className="form-input" value={formData.confirmPassword} onChange={handleChange} />
-                        <AnimatePresence>
-                           {passwordsMatch && <motion.div initial={{opacity: 0, scale: 0.5}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0, scale: 0.5}} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500"><FiCheck/></motion.div>}
-                           {passwordsDoNotMatch && <motion.div initial={{opacity: 0, scale: 0.5}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0, scale: 0.5}} className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500"><CgDanger/></motion.div>}
-                        </AnimatePresence>
-                    </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
         </motion.div>
-      </form>
+        
+        {/* [MODIFIED] Layout utama dibuat "stretch" */}
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+            {/* [MODIFIED] Kolom kiri dibuat flex */}
+            <div className="lg:col-span-1 flex flex-col space-y-8">
+                <motion.div variants={itemVariants} className="h-full">
+                  <div className="bg-white p-6 rounded-2xl shadow-lg border text-center h-full flex flex-col">
+                      <div className="relative w-32 h-32 mx-auto group">
+                          <motion.img key={avatarPreview} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                            src={avatarPreview || `https://ui-avatars.com/api/?name=${formData.name}&background=e0f2fe&color=0284c7&size=128&bold=true`}
+                            alt="Avatar" className="w-full h-full rounded-full object-cover border-4 border-white shadow-xl"
+                          />
+                          <label htmlFor="avatar-upload" className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                              <FiUpload className="text-white text-3xl" />
+                          </label>
+                          <input id="avatar-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/png, image/jpeg" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-800 mt-4">{formData.name}</h2>
+                      <p className="text-gray-500">@{formData.username}</p>
+                      <div className="flex justify-center gap-3 mt-4">
+                          <label htmlFor="avatar-upload" className="px-4 py-2 text-sm font-semibold bg-sky-100 text-sky-800 rounded-lg cursor-pointer hover:bg-sky-200 flex items-center gap-2">
+                              <FiUpload /> Ubah Foto
+                          </label>
+                          {avatarPreview && (
+                            <button onClick={handleDeleteAvatar} className="px-4 py-2 text-sm font-semibold bg-red-100 text-red-800 rounded-lg hover:bg-red-200 flex items-center gap-2">
+                              <FiTrash2 /> Hapus
+                            </button>
+                          )}
+                      </div>
+                      <div className="mt-6 pt-6 border-t text-left text-sm text-gray-600 space-y-3 flex-grow">
+                          <p className="flex items-center gap-3"><FiMail className="text-gray-400"/> {formData.email}</p>
+                          <p className="flex items-center gap-3"><FiPhone className="text-gray-400"/> {formData.noHp}</p>
+                          {/* [FIX] Tanggal bergabung diperbaiki */}
+                          <p className="flex items-center gap-3"><FiCalendar className="text-gray-400"/> Bergabung pada {user && user.createdAt ? new Date(user.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</p>
+                      </div>
+                  </div>
+                </motion.div>
+                
+                <motion.div variants={itemVariants}>
+                    <div className="bg-white p-6 rounded-2xl shadow-lg border">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Perangkat Terhubung</h3>
+                        {devices.find(d => d.current) && (
+                            <p className="text-sm text-gray-500 mb-4">
+                                Saat ini aktif di <span className="font-semibold text-gray-700">{devices.find(d => d.current).name}</span>.
+                            </p>
+                        )}
+                        <motion.button onClick={() => setIsDevicesModalOpen(true)} whileTap={{scale: 0.98}} className="w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors">
+                            Kelola Sesi
+                        </motion.button>
+                    </div>
+                </motion.div>
+            </div>
+
+            {/* Kolom Kanan */}
+            <motion.form id="profile-form" onSubmit={handleSubmit} variants={itemVariants} className="lg:col-span-2 flex flex-col space-y-8">
+                <div className="bg-white p-8 rounded-2xl shadow-lg border h-full">
+                    <h3 className="text-xl font-bold text-gray-800 mb-6">Informasi Personal</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InputField icon={FiEdit} label="Nama Lengkap" name="name" value={formData.name} onChange={handleChange} />
+                        <InputField icon={FiUser} label="Username" name="username" value={formData.username} onChange={handleChange} />
+                        <InputField icon={FiMail} label="Email" name="email" value={formData.email} onChange={handleChange} />
+                        <InputField icon={FiPhone} label="No. HP" name="noHp" value={formData.noHp} onChange={handleChange} />
+                        <InputField icon={FiSmile} label="Umur" name="age" type="number" value={formData.age} onChange={handleChange} />
+                        {/* [MODIFIED] Menggunakan CustomSelect */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-600 mb-1">Gender</label>
+                            <CustomSelect
+                                options={genderOptions}
+                                selected={selectedGender}
+                                onChange={handleGenderChange}
+                            />
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="bg-white p-8 rounded-2xl shadow-lg border h-full">
+                    <h3 className="text-xl font-bold text-gray-800 mb-6">Keamanan</h3>
+                    <div className="grid grid-cols-1 gap-6">
+                        <div className="relative">
+                          <InputField icon={FiLock} label="Password Baru" name="password" placeholder="Kosongkan jika tidak diubah" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleChange} />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[38px] text-gray-400 hover:text-gray-600">
+                            {showPassword ? <FiEye /> : <FiEyeOff />}
+                          </button>
+                        </div>
+                         <div className="relative">
+                            <InputField icon={FiLock} label="Konfirmasi Password" name="confirmPassword" placeholder="Ulangi password" type={showConfirmPassword ? 'text' : 'password'} value={formData.confirmPassword} onChange={handleChange} />
+                            <div className="absolute right-3 top-[38px] flex items-center space-x-2">
+                              <AnimatePresence>
+                                {passwordsMatch && <motion.div initial={{opacity:0, scale:0.5}} animate={{opacity:1, scale:1}} className="text-green-500"><FiCheck/></motion.div>}
+                                {passwordsDoNotMatch && <motion.div initial={{opacity:0, scale:0.5}} animate={{opacity:1, scale:1}} className="text-red-500"><CgDanger/></motion.div>}
+                              </AnimatePresence>
+                              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="text-gray-400 hover:text-gray-600">
+                                {showConfirmPassword ? <FiEye /> : <FiEyeOff />}
+                              </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </motion.form>
+        </div>
+      </motion.div>
       
-      {/* [FIX] CSS disematkan di sini untuk memastikan posisinya benar */}
-      <style>{`
-        .profile-admin-page {
-            background-color: #f3f4f6; /* bg-gray-100 */
-            padding: 2rem;
-            min-height: 100%;
-        }
-        .input-wrapper {
-            position: relative;
-        }
-        .form-label {
-            display: block;
-            font-size: 0.875rem; /* 14px */
-            font-weight: 600;
-            color: #4b5563; /* gray-600 */
-            margin-bottom: 0.5rem; /* 8px */
-        }
-        .form-input {
-            width: 100%;
-            padding-left: 2.75rem !important; /* 44px for icon */
-            padding-right: 1rem;
-            padding-top: 0.625rem; /* 10px */
-            padding-bottom: 0.625rem;
-            background-color: #f9fafb; /* bg-gray-50 */
-            border: 1px solid #d1d5db; /* border-gray-300 */
-            border-radius: 0.5rem; /* rounded-lg */
-            color: #111827; /* text-gray-900 */
-            transition: all 0.2s ease-in-out;
-        }
-        .form-input:focus {
-            outline: none;
-            border-color: #3b82f6; /* focus:border-blue-500 */
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); /* custom focus ring */
-        }
-        .form-icon {
-            position: absolute;
-            top: 50%;
-            left: 0.75rem; /* 12px */
-            transform: translateY(-50%);
-            color: #9ca3af; /* text-gray-400 */
-            z-index: 10;
-            pointer-events: none; /* Agar ikon tidak bisa diklik */
-        }
-        select.form-input {
-          padding-left: 2.75rem !important;
-        }
-      `}</style>
-    </div>
+      {/* Modal Daftar Perangkat */}
+      <AnimatePresence>
+        {isDevicesModalOpen && (
+            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 p-4">
+              {/* [MODIFIED] Modal diperbesar */}
+              <motion.div initial={{scale:0.9, y:20}} animate={{scale:1, y:0}} exit={{scale:0.9, y:20}} className="bg-white rounded-xl shadow-2xl w-full max-w-2xl">
+                <div className="flex justify-between items-center p-5 border-b">
+                  <h4 className="text-lg font-bold text-gray-800">Sesi Aktif ({devices.length})</h4>
+                  <button onClick={() => setIsDevicesModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-full"><FiX/></button>
+                </div>
+                <ul className="space-y-1 p-3 max-h-96 overflow-y-auto">
+                {devices.map(device => (
+                    <li key={device.id} className="flex items-center justify-between text-left p-3 hover:bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-4">
+                            <device.icon className={`text-3xl flex-shrink-0 ${device.current ? 'text-green-500' : 'text-gray-500'}`}/>
+                            <div>
+                                <p className="font-semibold text-gray-800">{device.name}</p>
+                                <p className={`text-sm ${device.current ? 'text-green-600' : 'text-gray-500'}`}>{device.last_active}</p>
+                            </div>
+                        </div>
+                        {!device.current && (
+                            <motion.button onClick={() => setDeviceToRemove(device)} whileTap={{scale:0.9}} className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100" title="Logout from this device">
+                                <FiLogOut/>
+                            </motion.button>
+                        )}
+                    </li>
+                ))}
+                </ul>
+              </motion.div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Konfirmasi Hapus Device */}
+      <AnimatePresence>
+        {deviceToRemove && (
+             <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+               <motion.div initial={{scale:0.9}} animate={{scale:1}} exit={{scale:0.9}} className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 text-center">
+                   <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                       <FiShield className="text-4xl text-red-500"/>
+                   </div>
+                   <h2 className="text-xl font-bold my-4">Hentikan Sesi Aktif?</h2>
+                   <p className="text-gray-600">Anda akan keluar dari <span className="font-semibold">{deviceToRemove.name}</span>. Anda harus login kembali pada perangkat tersebut.</p>
+                   <div className="flex justify-center gap-4 mt-6">
+                       <motion.button onClick={() => setDeviceToRemove(null)} whileHover={{scale:1.05}} className="px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-semibold">Batal</motion.button>
+                       <motion.button onClick={() => handleRemoveDevice(deviceToRemove)} whileHover={{scale:1.05}} className="px-6 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 font-semibold">Ya, Hentikan</motion.button>
+                   </div>
+               </motion.div>
+             </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* [MODAL BARU] Konfirmasi Simpan Perubahan */}
+      <AnimatePresence>
+        {isConfirmModalOpen && (
+             <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+               <motion.div initial={{scale:0.9}} animate={{scale:1}} exit={{scale:0.9}} className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 text-center">
+                   <div className="w-16 h-16 bg-sky-100 rounded-full flex items-center justify-center mx-auto">
+                       <FiSave className="text-4xl text-sky-500"/>
+                   </div>
+                   <h2 className="text-xl font-bold my-4">Simpan Perubahan?</h2>
+                   <p className="text-gray-600">Apakah Anda yakin ingin menyimpan perubahan pada profil Anda?</p>
+                   <div className="flex justify-center gap-4 mt-6">
+                       <motion.button onClick={() => setIsConfirmModalOpen(false)} whileHover={{scale:1.05}} className="px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-semibold">Batal</motion.button>
+                       <motion.button onClick={executeSave} whileHover={{scale:1.05}} className="px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 font-semibold">Ya, Simpan</motion.button>
+                   </div>
+               </motion.div>
+             </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 
