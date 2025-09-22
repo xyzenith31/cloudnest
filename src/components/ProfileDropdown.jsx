@@ -1,10 +1,10 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiUser, FiLogOut, FiHardDrive } from 'react-icons/fi';
 import './css/ProfileDropdown.css';
+import { useAuth } from '../context/AuthContext';
 
-// [FIX] Logika inisial nama yang lebih baik
 const getInitials = (name) => {
   if (!name || typeof name !== 'string') return '?';
   const nameParts = name.trim().split(' ').filter(Boolean);
@@ -18,7 +18,15 @@ const getInitials = (name) => {
   return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
-const ProfileDropdown = ({ userName, userEmail, onLogout }) => {
+const ProfileDropdown = ({ userName, userEmail }) => {
+    const { logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+      logout();
+      navigate('/');
+    };
+
     const storage = {
         used: '7.2 GB',
         total: '10 GB',
@@ -68,13 +76,13 @@ const ProfileDropdown = ({ userName, userEmail, onLogout }) => {
             </div>
 
             <div className="profile-links-new">
-                <NavLink to="/profile" className="profile-item-new">
+                <NavLink to="/beranda/profile" className="profile-item-new">
                     <FiUser /><span>Profil Saya</span>
                 </NavLink>
             </div>
             
             <div className="profile-footer-new">
-                <button onClick={onLogout} className="profile-item-new logout w-full text-left">
+                <button onClick={handleLogout} className="profile-item-new logout w-full text-left">
                     <FiLogOut /><span>Logout</span>
                 </button>
             </div>

@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiUser, FiLock } from 'react-icons/fi';
-
 import Card from '../components/Card';
 import { CloudNestLogo } from '../components/Icons';
 import Notification from '../components/Notification';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { loginUserApi } from '../services/authService';
+import { useAuth } from '../context/AuthContext'; // <-- IMPORT BARU
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth(); // <-- GUNAKAN AUTH CONTEXT
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [notification, setNotification] = useState({ message: '', type: '' });
@@ -31,8 +32,7 @@ const LoginPage = () => {
         const response = await loginUserApi({ identifier, password });
         const user = response.data;
 
-        // [PERBAIKAN] Simpan data pengguna ke localStorage
-        localStorage.setItem('user', JSON.stringify(user));
+        login(user); // <-- SIMPAN DATA USER KE CONTEXT & LOCALSTORAGE
 
         setNotification({ message: `Login berhasil! Selamat datang, ${user.name}.`, type: 'success' });
 

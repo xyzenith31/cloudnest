@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiHome, FiFile, FiUploadCloud, FiUsers, FiHelpCircle, FiBell, FiMenu, FiX } from 'react-icons/fi';
 import { FaCloud } from 'react-icons/fa';
 import './css/Navbar.css';
-
 import NotificationDropdown from './NotificationDropdown';
 import ProfileDropdown from './ProfileDropdown';
+import { useAuth } from '../context/AuthContext';
 
 const useClickOutside = (ref, handler) => {
   useEffect(() => {
@@ -23,11 +23,9 @@ const useClickOutside = (ref, handler) => {
   }, [ref, handler]);
 };
 
-// [FIX] Logika inisial nama yang lebih baik
 const getInitials = (name) => {
   if (!name || typeof name !== 'string') return '?';
   const nameParts = name.trim().split(' ').filter(Boolean);
-
   if (nameParts.length === 0) return '?';
   if (nameParts.length === 1) {
     return nameParts[0].substring(0, 2).toUpperCase();
@@ -37,12 +35,13 @@ const getInitials = (name) => {
   return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
+// [PERBAIKAN UTAMA] Tautan navigasi disesuaikan dengan struktur rute di App.jsx
 const navLinksData = [
     { text: 'Beranda', to: '/beranda', icon: FiHome },
-    { text: 'File Saya', to: '/my-files', icon: FiFile },
-    { text: 'Upload File', to: '/upload', icon: FiUploadCloud },
-    { text: 'Komunitas', to: '/community', icon: FiUsers },
-    { text: 'Bantuan', to: '/help', icon: FiHelpCircle },
+    { text: 'File Saya', to: '/beranda/my-files', icon: FiFile },
+    { text: 'Upload File', to: '/beranda/upload', icon: FiUploadCloud },
+    { text: 'Komunitas', to: '/beranda/community', icon: FiUsers },
+    { text: 'Bantuan', to: '/beranda/help', icon: FiHelpCircle },
 ];
 
 const NavLinks = ({ isMobile, onLinkClick }) => {
@@ -58,6 +57,7 @@ const NavLinks = ({ isMobile, onLinkClick }) => {
                     <NavLink
                         to={link.to}
                         onClick={onLinkClick}
+                        end={link.to === '/beranda'} // Pastikan 'Beranda' hanya aktif saat path persis
                         className={({ isActive }) => 
                             `nav-link-modern ${isActive ? 'active' : ''} ${isMobile ? 'mobile' : ''}`
                         }
@@ -72,24 +72,17 @@ const NavLinks = ({ isMobile, onLinkClick }) => {
 };
 
 const Navbar = () => {
+  const { user } = useAuth(); // [PERBAIKAN] Mengambil data pengguna dari AuthContext
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [sliderPosition, setSliderPosition] = useState({ left: 0, width: 0 });
-  const [user, setUser] = useState({ name: '', email: '' });
   
   const navRef = useRef(null);
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
-
-  useEffect(() => {
+    // Menyesuaikan slider navbar saat lokasi berubah
     const activeLink = navRef.current?.querySelector('.nav-link-modern.active:not(.mobile)');
     if (activeLink) {
       setSliderPosition({
@@ -100,6 +93,7 @@ const Navbar = () => {
   }, [location, isMobileMenuOpen]);
   
   useEffect(() => {
+    // Mencegah scroll body saat menu mobile terbuka
     if (isMobileMenuOpen) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -128,16 +122,13 @@ const Navbar = () => {
   const toggleProfile = () => setIsProfileOpen(prev => !prev);
   const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    setIsProfileOpen(false);
-    navigate('/');
-  };
-
   const containerVariants = {
       hidden: { transition: { staggerChildren: 0.05, staggerDirection: -1 } },
       visible: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } },
   };
+
+  const userName = user ? user.name : 'Tamu';
+  const userEmail = user ? user.email : 'tamu@email.com';
 
   return (
     <>
@@ -153,7 +144,7 @@ const Navbar = () => {
 
         <div className="navbar-section center hidden lg:flex">
           <div className="nav-links-modern" ref={navRef}>
-            <NavLinks isMobile={false} onLinkClick={() => setIsMobileMenuOpen(false)} />
+            <NavLinks isMobile={false} />
             <motion.div
               className="nav-slider"
               animate={sliderPosition}
@@ -180,11 +171,11 @@ const Navbar = () => {
           </div>
           <div ref={profileRef} className="navbar-item-wrapper">
             <motion.button whileTap={{ scale: 0.95 }} onClick={toggleProfile} className="profile-container-modern">
-              <div className="profile-avatar-modern"><span>{getInitials(user.name)}</span></div>
-              <span className="profile-name-modern hidden md:block">{user.name}</span>
+              <div className="profile-avatar-modern"><span>{getInitials(userName)}</span></div>
+              <span className="profile-name-modern hidden md:block">{userName}</span>
             </motion.button>
             <AnimatePresence>
-              {isProfileOpen && <ProfileDropdown userName={user.name} userEmail={user.email} onLogout={handleLogout} />}
+              {isProfileOpen && <ProfileDropdown userName={userName} userEmail={userEmail} />}
             </AnimatePresence>
           </div>
           <div className="lg:hidden">
