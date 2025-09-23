@@ -140,7 +140,7 @@ const MyFilesPage = () => {
   const [sort, setSort] = useState({ by: 'date', order: 'desc' });
   const [selectedFile, setSelectedFile] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false); // State untuk modal konfirmasi
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   const handleUpdateFile = (updatedFile) => {
     setFiles(files.map(f => f.id === updatedFile.id ? updatedFile : f));
@@ -172,60 +172,65 @@ const MyFilesPage = () => {
   const executeDeleteAll = () => {
     setFiles(files.filter(file => !filteredAndSortedFiles.includes(file)));
     setIsDeleteConfirmOpen(false);
-    // Tambahkan notifikasi jika perlu
   };
 
   return (
     <div className="flex gap-8 p-4 md:p-8">
       <Sidebar activeFilter={filter} setActiveFilter={setFilter} usagePercentage={usagePercentage} />
       <main className="flex-1 min-w-0">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex justify-between items-center mb-6">
-            <div>
-                <h1 className="text-4xl font-bold text-gray-800">File Saya</h1>
-                <p className="text-gray-500">Total {filteredAndSortedFiles.length} item ditemukan.</p>
-            </div>
-            <div className="flex items-center gap-2">
-                <SortDropdown sort={sort} setSort={setSort} />
-                <div className="flex items-center bg-gray-200 p-1 rounded-full">
-                    <button onClick={() => setViewMode('list')} className={`p-2 rounded-full transition-colors ${viewMode === 'list' ? 'bg-white text-blue-500 shadow' : 'text-gray-500'}`}><FiList/></button>
-                    <button onClick={() => setViewMode('grid')} className={`p-2 rounded-full transition-colors ${viewMode === 'grid' ? 'bg-white text-blue-500 shadow' : 'text-gray-500'}`}><FiGrid/></button>
+        <motion.div 
+            className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50"
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5, delay: 0.1 }}
+        >
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-4xl font-bold text-gray-800">File Saya</h1>
+                    <p className="text-gray-500">Total {filteredAndSortedFiles.length} item ditemukan.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <SortDropdown sort={sort} setSort={setSort} />
+                    <div className="flex items-center bg-gray-200 p-1 rounded-full">
+                        <button onClick={() => setViewMode('list')} className={`p-2 rounded-full transition-colors ${viewMode === 'list' ? 'bg-white text-blue-500 shadow' : 'text-gray-500'}`}><FiList/></button>
+                        <button onClick={() => setViewMode('grid')} className={`p-2 rounded-full transition-colors ${viewMode === 'grid' ? 'bg-white text-blue-500 shadow' : 'text-gray-500'}`}><FiGrid/></button>
+                    </div>
                 </div>
             </div>
-        </motion.div>
 
-        {/* Search Bar and Action Buttons */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="flex items-center gap-4 mb-8">
-            <div className="relative flex-grow">
-                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                    type="text"
-                    placeholder="Cari file dalam kategori ini..."
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-full focus:ring-2 focus:ring-blue-400 outline-none transition-all"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            <div className="flex items-center gap-4 mb-8">
+                <div className="relative flex-grow">
+                    <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Cari file dalam kategori ini..."
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 bg-white rounded-full focus:ring-2 focus:ring-blue-400 outline-none transition-all"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <motion.button onClick={handleDownloadAll} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-green-500 text-white font-semibold rounded-full shadow-md hover:bg-green-600 disabled:bg-gray-400" disabled={filteredAndSortedFiles.length === 0}>
+                    <FiDownload />
+                    <span>Unduh Semua</span>
+                </motion.button>
+                <motion.button onClick={handleDeleteAll} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-red-500 text-white font-semibold rounded-full shadow-md hover:bg-red-600 disabled:bg-gray-400" disabled={filteredAndSortedFiles.length === 0}>
+                    <FiTrash2 />
+                    <span>Hapus Semua</span>
+                </motion.button>
             </div>
-            <motion.button onClick={handleDownloadAll} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-green-500 text-white font-semibold rounded-full shadow-md hover:bg-green-600 disabled:bg-gray-400" disabled={filteredAndSortedFiles.length === 0}>
-                <FiDownload />
-                <span>Unduh Semua</span>
-            </motion.button>
-            <motion.button onClick={handleDeleteAll} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-red-500 text-white font-semibold rounded-full shadow-md hover:bg-red-600 disabled:bg-gray-400" disabled={filteredAndSortedFiles.length === 0}>
-                <FiTrash2 />
-                <span>Hapus Semua</span>
-            </motion.button>
-        </motion.div>
 
-        <motion.div
-          key={viewMode}
-          className={`mt-8 ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}`}
-        >
-          <AnimatePresence>
-            {filteredAndSortedFiles.map(file => (
-              viewMode === 'list'
-                ? <FileListItem key={file.id} file={file} onSelect={() => setSelectedFile(file)} />
-                : <FileGridItem key={file.id} file={file} onSelect={() => setSelectedFile(file)} />
-            ))}
-          </AnimatePresence>
+            <motion.div
+              key={viewMode}
+              className={`mt-8 ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}`}
+            >
+              <AnimatePresence>
+                {filteredAndSortedFiles.map(file => (
+                  viewMode === 'list'
+                    ? <FileListItem key={file.id} file={file} onSelect={() => setSelectedFile(file)} />
+                    : <FileGridItem key={file.id} file={file} onSelect={() => setSelectedFile(file)} />
+                ))}
+              </AnimatePresence>
+            </motion.div>
         </motion.div>
 
         <FileDetailModal file={selectedFile} onClose={() => setSelectedFile(null)} onUpdateFile={handleUpdateFile} />

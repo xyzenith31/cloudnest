@@ -7,7 +7,7 @@ import {
 import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive } from 'react-icons/fa';
 import FileDetailModal from '../../components/FileDetailModal';
 
-// --- DATA DUMMY (DIPERBANYAK & DIPERKAYA UNTUK DEMO MODAL) ---
+// --- DATA DUMMY ---
 const files = [
   { id: 1, name: 'Proposal_Proyek.pdf', type: 'pdf', category: 'document', size: 2.3 * 1024 * 1024, date: '2023-10-26T10:00:00Z', createdAt: '2023-10-25T09:00:00Z', owner: 'Anda', starred: true },
   { id: 2, name: 'Laporan_Keuangan.docx', type: 'word', category: 'document', size: 5.1 * 1024 * 1024, date: '2023-10-25T14:30:00Z', createdAt: '2023-10-25T14:30:00Z', owner: 'Anda', starred: false },
@@ -122,7 +122,12 @@ const UserBeranda = () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-              <motion.div variants={itemVariants} initial="hidden" animate="visible">
+              <motion.div 
+                variants={itemVariants} 
+                initial="hidden" 
+                animate="visible"
+                className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50"
+              >
                   <div className="flex flex-col md:flex-row justify-between items-center mb-5 gap-4">
                       <h2 className="text-2xl font-semibold text-gray-700">File Terbaru</h2>
                       <div className='flex items-center gap-4 w-full md:w-auto'>
@@ -143,19 +148,18 @@ const UserBeranda = () => {
                       </div>
                   </div>
 
-                  <AnimatePresence>
-                      <motion.div
-                        key={viewMode}
-                        transition={{ duration: 0.3 }}
-                        className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6' : 'space-y-3'}
-                      >
-                        {filteredFiles.map((file) => (
-                          viewMode === 'list' 
-                            ? <FileListItem key={file.id} file={file} onSelect={() => setSelectedFile(file)} /> 
-                            : <FileGridItem key={file.id} file={file} onSelect={() => setSelectedFile(file)} />
-                        ))}
-                      </motion.div>
-                  </AnimatePresence>
+                  <motion.div
+                    key={viewMode}
+                    className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6' : 'space-y-3'}
+                  >
+                    <AnimatePresence>
+                      {filteredFiles.map((file) => (
+                        viewMode === 'list' 
+                          ? <FileListItem key={file.id} file={file} onSelect={() => setSelectedFile(file)} /> 
+                          : <FileGridItem key={file.id} file={file} onSelect={() => setSelectedFile(file)} />
+                      ))}
+                    </AnimatePresence>
+                  </motion.div>
               </motion.div>
           </div>
 
@@ -267,10 +271,9 @@ const StorageStatCard = ({ used, total, unit }) => {
 const FileListItem = ({ file, onSelect }) => (
     <motion.div
       layoutId={`file-card-${file.id}`}
-      // [ANIMASI] Transisi tipe spring untuk efek lebih natural
-      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-      variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
-      exit={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, transition: { duration: 0.15 } }}
       whileHover={{ scale: 1.015, boxShadow: '0px 10px 25px -10px rgba(0, 0, 0, 0.1)', borderColor: '#60a5fa' }}
       className="bg-white/80 backdrop-blur-sm p-4 rounded-xl shadow-md border flex items-center justify-between gap-4 transition-all duration-300 cursor-pointer"
       onClick={onSelect}
@@ -284,7 +287,7 @@ const FileListItem = ({ file, onSelect }) => (
       </div>
       <div className="flex items-center gap-2 text-sm text-gray-500">
           <FiClock />
-          <span>{file.lastModified}</span>
+          <span>{new Date(file.date).toLocaleDateString()}</span>
       </div>
     </motion.div>
 );
@@ -293,10 +296,9 @@ const FileListItem = ({ file, onSelect }) => (
 const FileGridItem = ({ file, onSelect }) => (
     <motion.div
         layoutId={`file-card-${file.id}`}
-        // [ANIMASI] Transisi tipe spring untuk efek lebih natural
-        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        variants={{ hidden: { y: 20, opacity: 0, scale: 0.9 }, visible: { y: 0, opacity: 1, scale: 1 } }}
-        exit={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.15 } }}
         whileHover={{ y: -10, boxShadow: '0px 15px 30px -10px rgba(0, 0, 0, 0.15)', transition: { type: 'spring', stiffness: 300 } }}
         className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl shadow-lg border flex flex-col items-center text-center cursor-pointer"
         onClick={onSelect}
@@ -306,7 +308,7 @@ const FileGridItem = ({ file, onSelect }) => (
         <p className="text-sm text-gray-500 mt-1">{file.size}</p>
         <div className="flex items-center gap-2 text-xs text-gray-400 mt-3">
             <FiClock size={12} />
-            <span>{file.lastModified}</span>
+            <span>{new Date(file.date).toLocaleDateString()}</span>
         </div>
     </motion.div>
 );
