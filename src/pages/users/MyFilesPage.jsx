@@ -1,19 +1,20 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FiImage, FiVideo, FiFileText, FiArchive, FiGrid, FiList, FiStar, FiCpu,
-    FiAperture, FiSearch, FiHardDrive, FiDownload, FiTrash2, FiAlertTriangle, FiMusic
+    FiAperture, FiSearch, FiHardDrive, FiDownload, FiTrash2, FiAlertTriangle, FiMusic, FiFolder, FiPlus, FiMove
 } from 'react-icons/fi';
 import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid } from 'react-icons/fa';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import SortDropdown from '../../components/SortDropdown';
 import FileDetailModal from '../../components/FileDetailModal';
+import NewFolderModal from '../../components/NewFolderModal';
 import { useAuth } from '../../context/AuthContext';
-import { getUserFiles, deleteAllFiles, downloadAllFiles, deleteFile, downloadFile } from '../../services/fileService';
+import { getUserFiles, deleteAllFiles, downloadAllFiles, deleteFile, downloadFile, createFolder, moveFiles, updateFile } from '../../services/fileService';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Notification from '../../components/Notification';
 
-// --- Helper Functions (formatBytes, getFileIcon) tetap sama ---
+// --- Helper Functions ---
 const formatBytes = (bytes, decimals = 2) => {
   if (!+bytes) return '0 Bytes';
   const k = 1024;
@@ -25,6 +26,9 @@ const formatBytes = (bytes, decimals = 2) => {
 
 const getFileIcon = (type, props = {}) => {
   const baseProps = { className: "text-4xl flex-shrink-0", ...props };
+  
+  if (type === 'folder') return <FiFolder {...baseProps} className={`${baseProps.className} text-yellow-500`} />;
+
   const fileType = type.split('/')[0];
   const fileDetail = type.split('/')[1];
 
@@ -40,7 +44,7 @@ const getFileIcon = (type, props = {}) => {
 };
 
 
-// --- Sidebar & ConfirmationModal (tetap sama) ---
+// --- Sidebar ---
 const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage }) => {
     const filters = [
         { id: 'all', name: 'Semua Media', icon: FiAperture },
@@ -92,7 +96,9 @@ const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage }) => {
         </motion.aside>
     );
 };
-const ConfirmationModal = ({ isOpen, onClose, onConfirm, count }) => {
+
+// --- Confirmation Modal ---
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
     if (!isOpen) return null;
   
     return (
@@ -101,7 +107,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, count }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[60] p-4"
         >
           <motion.div
             initial={{ scale: 0.9, y: 20 }}
@@ -112,10 +118,8 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, count }) => {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
               <FiAlertTriangle className="text-4xl text-red-500" />
             </div>
-            <h2 className="text-xl font-bold my-4">Anda Yakin?</h2>
-            <p className="text-gray-600">
-              Anda akan menghapus <span className="font-semibold">{count} file</span>. Tindakan ini tidak dapat dibatalkan.
-            </p>
+            <h2 className="text-xl font-bold my-4">{title}</h2>
+            <p className="text-gray-600">{message}</p>
             <div className="flex justify-center gap-4 mt-6">
               <motion.button onClick={onClose} whileHover={{ scale: 1.05 }} className="px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 font-semibold">
                 Batal
@@ -128,9 +132,10 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, count }) => {
         </motion.div>
       </AnimatePresence>
     );
-  };
+};
 
 
+// --- Main Page Component ---
 const MyFilesPage = () => {
     const { user } = useAuth();
     const [files, setFiles] = useState([]);
@@ -142,9 +147,13 @@ const MyFilesPage = () => {
     const [sort, setSort] = useState({ by: 'date', order: 'desc' });
     const [selectedFile, setSelectedFile] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
-    const fetchFiles = async () => {
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [isCreateFolderModalOpen, setCreateFolderModalOpen] = useState(false);
+    const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, items: [] });
+    const [currentFolder, setCurrentFolder] = useState(null); // Untuk navigasi folder
+
+    const fetchFiles = useCallback(async () => {
         setIsLoading(true);
         try {
             const response = await getUserFiles();
@@ -155,25 +164,54 @@ const MyFilesPage = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchFiles();
-    }, []);
+    }, [fetchFiles]);
 
     const filteredAndSortedFiles = useMemo(() => {
         return files
-            .filter(file => (filter === 'all' || file.category === filter) && file.fileName.toLowerCase().includes(searchTerm.toLowerCase()))
+            .filter(file => 
+                (file.parent === currentFolder) &&
+                (filter === 'all' || file.category === filter) && 
+                file.fileName.toLowerCase().includes(searchTerm.toLowerCase())
+            )
             .sort((a, b) => {
+                if (a.isDirectory && !b.isDirectory) return -1;
+                if (!a.isDirectory && b.isDirectory) return 1;
                 if (sort.by === 'name') return sort.order === 'asc' ? a.fileName.localeCompare(b.fileName) : b.fileName.localeCompare(a.fileName);
                 if (sort.by === 'size') return sort.order === 'asc' ? a.fileSize - b.fileSize : b.fileSize - a.fileSize;
                 return sort.order === 'asc' ? new Date(a.createdAt) - new Date(b.createdAt) : new Date(b.createdAt) - new Date(a.createdAt);
             });
-    }, [filter, sort, files, searchTerm]);
+    }, [filter, sort, files, searchTerm, currentFolder]);
 
     const totalStorage = 10 * 1024 * 1024 * 1024; // 10 GB
     const usagePercentage = (totalSize / totalStorage) * 100;
 
+    const handleItemClick = (item) => {
+        if (item.isDirectory) {
+            setCurrentFolder(item._id);
+        } else {
+            setSelectedFile(item);
+        }
+    };
+
+    const handleToggleSelect = (itemId) => {
+        setSelectedItems(prev =>
+            prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+        );
+    };
+
+    const handleSelectAll = () => {
+        if (selectedItems.length === filteredAndSortedFiles.length) {
+            setSelectedItems([]);
+        } else {
+            setSelectedItems(filteredAndSortedFiles.map(f => f._id));
+        }
+    };
+    
+    // --- Actions ---
     const handleDownloadAll = async () => {
         try {
             await downloadAllFiles(user.username);
@@ -181,40 +219,72 @@ const MyFilesPage = () => {
             setNotification({ message: 'Gagal mengunduh semua file', type: 'error' });
         }
     };
+    
+    const handleDeleteConfirmation = () => {
+        const itemsToDelete = files.filter(f => selectedItems.includes(f._id));
+        setDeleteConfirmation({ 
+            isOpen: true, 
+            items: itemsToDelete,
+            title: `Hapus ${itemsToDelete.length} Item?`,
+            message: `Anda akan menghapus ${itemsToDelete.length} item. Tindakan ini tidak dapat dibatalkan.`
+        });
+    };
 
-    const handleDeleteAll = () => setIsDeleteConfirmOpen(true);
-
-    const executeDeleteAll = async () => {
+    const executeDelete = async () => {
+        const itemsToDelete = deleteConfirmation.items;
         try {
-            await deleteAllFiles();
-            setNotification({ message: 'Semua file berhasil dihapus', type: 'success' });
-            fetchFiles(); // Refresh a-list
+            for (const item of itemsToDelete) {
+                await deleteFile(item._id);
+            }
+            setNotification({ message: `${itemsToDelete.length} item berhasil dihapus`, type: 'success' });
+            fetchFiles();
         } catch (error) {
-            setNotification({ message: 'Gagal menghapus semua file', type: 'error' });
+            setNotification({ message: 'Gagal menghapus item', type: 'error' });
         } finally {
-            setIsDeleteConfirmOpen(false);
+            setDeleteConfirmation({ isOpen: false, items: [] });
+            setSelectedItems([]);
+        }
+    };
+
+    const handleCreateFolder = async (folderName) => {
+        try {
+            await createFolder(folderName, currentFolder);
+            setNotification({ message: 'Folder berhasil dibuat', type: 'success' });
+            fetchFiles();
+        } catch (error) {
+            setNotification({ message: 'Gagal membuat folder', type: 'error' });
+        } finally {
+            setCreateFolderModalOpen(false);
+        }
+    };
+
+    const handleMoveSelected = async () => {
+        // Di sini Anda bisa membuka modal lain untuk memilih folder tujuan
+        // Untuk saat ini, kita akan memindahkannya ke root (null)
+        const destinationFolderId = null; 
+        try {
+            await moveFiles(selectedItems, destinationFolderId);
+            setNotification({ message: 'Item berhasil dipindahkan', type: 'success' });
+            fetchFiles();
+            setSelectedItems([]);
+        } catch (error) {
+            setNotification({ message: 'Gagal memindahkan item', type: 'error' });
         }
     };
     
-    // --- [FUNGSI BARU] Untuk menangani aksi dari modal detail ---
-    const handleFileAction = async (action, file) => {
-        if (action === 'delete') {
-            try {
-                await deleteFile(file._id);
-                setNotification({ message: 'File berhasil dihapus', type: 'success' });
-                fetchFiles();
-                setSelectedFile(null);
-            } catch (error) {
-                setNotification({ message: 'Gagal menghapus file', type: 'error' });
-            }
-        } else if (action === 'download') {
-            try {
-                await downloadFile(file._id, file.fileName);
-            } catch (error) {
-                setNotification({ message: 'Gagal mengunduh file', type: 'error' });
-            }
+    const handleUpdateFile = async (updatedFile) => {
+        try {
+            await updateFile(updatedFile._id, {
+                name: updatedFile.name,
+                starred: updatedFile.starred,
+            });
+            setNotification({ message: 'File berhasil diperbarui', type: 'success' });
+            fetchFiles();
+        } catch (error) {
+            setNotification({ message: 'Gagal memperbarui file', type: 'error' });
         }
     };
+    
 
     return (
         <div className="flex gap-8 p-4 md:p-8">
@@ -241,84 +311,162 @@ const MyFilesPage = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 mb-8">
+                    <div className="flex items-center gap-4 mb-8 flex-wrap">
                          <div className="relative flex-grow">
                             <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Cari file dalam kategori ini..."
+                                placeholder="Cari file..."
                                 className="w-full pl-10 pr-4 py-3 border border-gray-200 bg-white rounded-full focus:ring-2 focus:ring-blue-400 outline-none transition-all"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <motion.button onClick={handleDownloadAll} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-green-500 text-white font-semibold rounded-full shadow-md hover:bg-green-600 disabled:bg-gray-400" disabled={filteredAndSortedFiles.length === 0}>
-                            <FiDownload />
-                            <span>Unduh Semua</span>
+                        <motion.button onClick={() => setCreateFolderModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-blue-500 text-white font-semibold rounded-full shadow-md hover:bg-blue-600">
+                            <FiPlus />
+                            <span>Folder Baru</span>
                         </motion.button>
-                        <motion.button onClick={handleDeleteAll} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-red-500 text-white font-semibold rounded-full shadow-md hover:bg-red-600 disabled:bg-gray-400" disabled={filteredAndSortedFiles.length === 0}>
-                            <FiTrash2 />
-                            <span>Hapus Semua</span>
-                        </motion.button>
+                        {selectedItems.length > 0 && (
+                            <>
+                            <motion.button onClick={handleMoveSelected} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-indigo-500 text-white font-semibold rounded-full shadow-md hover:bg-indigo-600">
+                                <FiMove />
+                                <span>Pindahkan</span>
+                            </motion.button>
+                             <motion.button onClick={handleDeleteConfirmation} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-red-500 text-white font-semibold rounded-full shadow-md hover:bg-red-600">
+                                <FiTrash2 />
+                                <span>Hapus ({selectedItems.length})</span>
+                            </motion.button>
+                            </>
+                        )}
                     </div>
                     
                     {isLoading ? <div className="flex justify-center p-10"><LoadingSpinner/></div> :
+                    <>
+                    <div className="flex items-center px-4 py-2">
+                        <input
+                            type="checkbox"
+                            className="form-checkbox h-5 w-5 text-blue-600"
+                            onChange={handleSelectAll}
+                            checked={selectedItems.length > 0 && selectedItems.length === filteredAndSortedFiles.length}
+                        />
+                        <label className="ml-2">Pilih Semua</label>
+                    </div>
                     <motion.div
                         key={viewMode}
-                        className={`mt-8 ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}`}
+                        className={`mt-4 ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}`}
                     >
                         <AnimatePresence>
                             {filteredAndSortedFiles.map(file => (
                                 viewMode === 'list'
-                                    ? <FileListItem key={file._id} file={file} onSelect={() => setSelectedFile(file)} />
-                                    : <FileGridItem key={file._id} file={file} onSelect={() => setSelectedFile(file)} />
+                                    ? <FileListItem 
+                                        key={file._id} 
+                                        file={file} 
+                                        onSelect={() => handleItemClick(file)} 
+                                        onToggleSelect={() => handleToggleSelect(file._id)}
+                                        isSelected={selectedItems.includes(file._id)}
+                                      />
+                                    : <FileGridItem 
+                                        key={file._id} 
+                                        file={file} 
+                                        onSelect={() => handleItemClick(file)}
+                                        onToggleSelect={() => handleToggleSelect(file._id)}
+                                        isSelected={selectedItems.includes(file._id)}
+                                      />
                             ))}
                         </AnimatePresence>
                     </motion.div>
+                    </>
                     }
                 </motion.div>
 
-                <FileDetailModal file={selectedFile} onClose={() => setSelectedFile(null)} onFileAction={handleFileAction} />
-                <ConfirmationModal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} onConfirm={executeDeleteAll} count={filteredAndSortedFiles.length} />
+                <FileDetailModal 
+                    file={selectedFile} 
+                    onClose={() => setSelectedFile(null)} 
+                    onUpdateFile={handleUpdateFile}
+                    onDeleteFile={(file) => {
+                        setDeleteConfirmation({ 
+                            isOpen: true, 
+                            items: [file],
+                            title: `Hapus File "${file.fileName}"?`,
+                            message: `Anda akan menghapus file ini secara permanen.`
+                        });
+                        setSelectedFile(null);
+                    }}
+                    onDownloadFile={(file) => downloadFile(file._id, file.fileName)}
+                />
+
+                <ConfirmationModal 
+                    isOpen={deleteConfirmation.isOpen} 
+                    onClose={() => setDeleteConfirmation({ isOpen: false, items: [] })} 
+                    onConfirm={executeDelete} 
+                    title={deleteConfirmation.title}
+                    message={deleteConfirmation.message}
+                />
+                
+                <NewFolderModal
+                    isOpen={isCreateFolderModalOpen}
+                    onClose={() => setCreateFolderModalOpen(false)}
+                    onCreate={handleCreateFolder}
+                />
             </main>
         </div>
     );
 };
 
-// --- Komponen FileListItem & FileGridItem (Diperbarui untuk data dari backend) ---
-const FileListItem = ({ file, onSelect }) => (
+// --- Komponen Item File ---
+const FileListItem = ({ file, onSelect, onToggleSelect, isSelected }) => (
     <motion.div
       layoutId={`file-card-${file._id}`}
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, transition: { duration: 0.15 } }}
       whileHover={{ scale: 1.02, boxShadow: '0 8px 20px rgba(0,0,0,0.08)' }}
-      className="bg-white p-3 rounded-lg shadow-md border flex items-center gap-4 cursor-pointer"
-      onClick={onSelect}
+      className={`bg-white p-3 rounded-lg shadow-md border flex items-center gap-4 transition-colors ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent'}`}
     >
-      {getFileIcon(file.fileType, {className: "text-3xl"})}
-      <div className="flex-grow min-w-0">
-        <p className="font-semibold text-gray-800 truncate">{file.fileName}</p>
-        <p className="text-sm text-gray-500">{new Date(file.createdAt).toLocaleDateString()}</p>
+      <input 
+        type="checkbox" 
+        checked={isSelected} 
+        onChange={(e) => { e.stopPropagation(); onToggleSelect(); }} 
+        className="form-checkbox h-5 w-5 text-blue-600 rounded" 
+      />
+      <div 
+        className="flex-grow min-w-0 flex items-center gap-4 cursor-pointer"
+        onClick={onSelect}
+        onDoubleClick={onSelect}
+      >
+        {getFileIcon(file.isDirectory ? 'folder' : file.fileType, {className: "text-3xl"})}
+        <div className="flex-grow min-w-0">
+          <p className="font-semibold text-gray-800 truncate">{file.fileName}</p>
+          <p className="text-sm text-gray-500">{new Date(file.createdAt).toLocaleDateString()}</p>
+        </div>
+        <p className="text-sm text-gray-600 font-medium flex-shrink-0">{!file.isDirectory ? formatBytes(file.fileSize) : '-'}</p>
       </div>
-      <p className="text-sm text-gray-600 font-medium flex-shrink-0">{formatBytes(file.fileSize)}</p>
     </motion.div>
 );
 
-const FileGridItem = ({ file, onSelect }) => (
+const FileGridItem = ({ file, onSelect, onToggleSelect, isSelected }) => (
     <motion.div
       layoutId={`file-card-${file._id}`}
       initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.15 } }}
       whileHover={{ y: -8, boxShadow: '0 15px 30px rgba(0,0,0,0.1)' }}
-      className="bg-white p-5 rounded-xl shadow-lg border flex flex-col items-center text-center cursor-pointer"
+      className={`bg-white p-5 rounded-xl shadow-lg border flex flex-col items-center text-center cursor-pointer relative transition-colors ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent'}`}
       onClick={onSelect}
+      onDoubleClick={onSelect}
     >
+       <input 
+        type="checkbox" 
+        checked={isSelected} 
+        onChange={(e) => { e.stopPropagation(); onToggleSelect(); }} 
+        onClick={(e) => e.stopPropagation()}
+        className="form-checkbox h-5 w-5 text-blue-600 rounded absolute top-3 right-3 z-10" 
+      />
       <div className="relative w-full">
-        {getFileIcon(file.fileType, { className: 'text-6xl mx-auto' })}
+        {getFileIcon(file.isDirectory ? 'folder' : file.fileType, { className: 'text-6xl mx-auto' })}
       </div>
       <p className="mt-4 font-semibold text-gray-800 break-all w-full truncate">{file.fileName}</p>
-      <p className="text-sm text-gray-500 mt-1">{formatBytes(file.fileSize)}</p>
+      <p className="text-sm text-gray-500 mt-1">{!file.isDirectory ? formatBytes(file.fileSize) : '-'}</p>
     </motion.div>
 );
 
-export default MyFilesPage; 
+
+export default MyFilesPage;

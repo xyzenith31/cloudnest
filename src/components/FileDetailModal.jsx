@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiDownload, FiShare2, FiTrash2, FiStar, FiEdit, FiCheck, FiFileText, FiTag, FiCalendar, FiUser, FiSave, FiHardDrive } from 'react-icons/fi';
+import { FiX, FiDownload, FiShare2, FiTrash2, FiStar, FiEdit, FiCheck, FiFileText, FiTag, FiCalendar, FiUser, FiSave, FiHardDrive, FiFolder } from 'react-icons/fi';
 import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid } from 'react-icons/fa';
 
-// --- HELPER FUNCTIONS ---
+// --- FUNGSI BANTU ---
 const getFileIcon = (type, props = {}) => {
   const baseProps = { className: "text-4xl flex-shrink-0", ...props };
   switch (type) {
@@ -13,6 +13,7 @@ const getFileIcon = (type, props = {}) => {
     case 'archive': return <FaFileArchive {...baseProps} className={`${baseProps.className} text-yellow-500`} />;
     case 'video': return <FaFileVideo {...baseProps} className={`${baseProps.className} text-indigo-500`} />;
     case 'apk': return <FaAndroid {...baseProps} className={`${baseProps.className} text-green-500`} />;
+    case 'folder': return <FiFolder {...baseProps} className={`${baseProps.className} text-yellow-500`} />;
     default: return <FiFileText {...baseProps} className={`${baseProps.className} text-gray-500`} />;
   }
 };
@@ -33,8 +34,8 @@ const ActionButton = ({ icon: Icon, text, onClick, variant = 'default', isFullWi
         favorite: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100',
     };
     return (
-        <motion.button 
-            whileHover={{ scale: 1.05 }} 
+        <motion.button
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onClick}
             className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-colors ${variants[variant]} ${isFullWidth ? 'w-full' : 'flex-1'}`}
@@ -45,14 +46,14 @@ const ActionButton = ({ icon: Icon, text, onClick, variant = 'default', isFullWi
 };
 
 
-const FileDetailModal = ({ file, onClose, onUpdateFile }) => {
+const FileDetailModal = ({ file, onClose, onUpdateFile, onDeleteFile, onDownloadFile }) => {
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState(file ? file.name : '');
 
   useEffect(() => {
     if(file) setNewName(file.name);
   }, [file]);
-  
+
   if (!file) return null;
 
   const handleRenameSave = () => {
@@ -62,6 +63,14 @@ const FileDetailModal = ({ file, onClose, onUpdateFile }) => {
 
   const toggleFavorite = () => {
     onUpdateFile({ ...file, starred: !file.starred });
+  }
+
+  const handleDelete = () => {
+    onDeleteFile(file);
+  }
+
+  const handleDownload = () => {
+    onDownloadFile(file);
   }
 
   const FilePreview = () => {
@@ -95,8 +104,8 @@ const FileDetailModal = ({ file, onClose, onUpdateFile }) => {
                 <div className="flex items-start justify-between mb-4 gap-2">
                     {isRenaming ? (
                         <div className="flex-grow mr-2">
-                           <input 
-                                type="text" 
+                           <input
+                                type="text"
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                                 className="w-full text-xl font-bold text-gray-800 border-b-2 border-blue-500 focus:outline-none"
@@ -124,10 +133,10 @@ const FileDetailModal = ({ file, onClose, onUpdateFile }) => {
                 <div className="mt-4 space-y-2">
                     <ActionButton icon={FiStar} text={file.starred ? "Hapus Favorit" : "Jadikan Favorit"} variant="favorite" isFullWidth onClick={toggleFavorite}/>
                     <div className="flex gap-2">
-                      <ActionButton icon={FiDownload} text="Unduh" />
+                      <ActionButton icon={FiDownload} text="Unduh" onClick={handleDownload} />
                       <ActionButton icon={FiShare2} text="Bagikan" />
                     </div>
-                    <ActionButton icon={FiTrash2} text="Hapus File" variant="delete" isFullWidth/>
+                    <ActionButton icon={FiTrash2} text="Hapus File" variant="delete" isFullWidth onClick={handleDelete} />
                 </div>
                  <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 bg-white/50 rounded-full p-1">
                     <FiX size={20}/>
