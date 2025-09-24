@@ -35,7 +35,6 @@ const getInitials = (name) => {
   return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
-// [PERBAIKAN UTAMA] Tautan navigasi disesuaikan dengan struktur rute di App.jsx
 const navLinksData = [
     { text: 'Beranda', to: '/beranda', icon: FiHome },
     { text: 'File Saya', to: '/beranda/my-files', icon: FiFile },
@@ -57,7 +56,7 @@ const NavLinks = ({ isMobile, onLinkClick }) => {
                     <NavLink
                         to={link.to}
                         onClick={onLinkClick}
-                        end={link.to === '/beranda'} // Pastikan 'Beranda' hanya aktif saat path persis
+                        end={link.to === '/beranda'}
                         className={({ isActive }) => 
                             `nav-link-modern ${isActive ? 'active' : ''} ${isMobile ? 'mobile' : ''}`
                         }
@@ -72,7 +71,7 @@ const NavLinks = ({ isMobile, onLinkClick }) => {
 };
 
 const Navbar = () => {
-  const { user } = useAuth(); // [PERBAIKAN] Mengambil data pengguna dari AuthContext
+  const { user } = useAuth();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -82,7 +81,6 @@ const Navbar = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Menyesuaikan slider navbar saat lokasi berubah
     const activeLink = navRef.current?.querySelector('.nav-link-modern.active:not(.mobile)');
     if (activeLink) {
       setSliderPosition({
@@ -93,7 +91,6 @@ const Navbar = () => {
   }, [location, isMobileMenuOpen]);
   
   useEffect(() => {
-    // Mencegah scroll body saat menu mobile terbuka
     if (isMobileMenuOpen) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -126,8 +123,10 @@ const Navbar = () => {
       hidden: { transition: { staggerChildren: 0.05, staggerDirection: -1 } },
       visible: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } },
   };
-
-  const userName = user ? user.name : 'Tamu';
+  
+  // [PERBAIKAN] Gunakan user.username untuk tampilan, dan user.name untuk dropdown
+  const displayUsername = user ? user.username : 'Tamu';
+  const userFullName = user ? user.name : 'Nama Tamu';
   const userEmail = user ? user.email : 'tamu@email.com';
 
   return (
@@ -171,11 +170,11 @@ const Navbar = () => {
           </div>
           <div ref={profileRef} className="navbar-item-wrapper">
             <motion.button whileTap={{ scale: 0.95 }} onClick={toggleProfile} className="profile-container-modern">
-              <div className="profile-avatar-modern"><span>{getInitials(userName)}</span></div>
-              <span className="profile-name-modern hidden md:block">{userName}</span>
+              <div className="profile-avatar-modern"><span>{getInitials(userFullName)}</span></div>
+              <span className="profile-name-modern hidden md:block">{displayUsername}</span>
             </motion.button>
             <AnimatePresence>
-              {isProfileOpen && <ProfileDropdown userName={userName} userEmail={userEmail} />}
+              {isProfileOpen && <ProfileDropdown userName={userFullName} userEmail={userEmail} />}
             </AnimatePresence>
           </div>
           <div className="lg:hidden">

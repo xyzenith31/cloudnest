@@ -12,7 +12,6 @@ import { getUserById } from '../services/userService';
 
 const socket = io("http://localhost:3001");
 
-// ... (Komponen ToggleButton, DottedBackground, SidebarItem, UserProfileActions tetap sama) ...
 export const ToggleButton = ({ isExpanded, onClick }) => (
     <motion.button
       onClick={onClick}
@@ -144,7 +143,8 @@ const UserProfileActions = ({ user, isExpanded }) => {
                     transition={{ duration: 0.3 }}
                     className="ml-3 overflow-hidden text-left"
                   >
-                    <p className="font-semibold text-sm text-sky-900 truncate" title={user.name}>{user.name}</p>
+                    {/* [PERBAIKAN] Tampilkan username di sini */}
+                    <p className="font-semibold text-sm text-sky-900 truncate" title={user.name}>{user.username}</p>
                     <p className="text-xs text-gray-500 truncate" title={user.role}>{user.role}</p>
                   </motion.div>
               )}
@@ -173,7 +173,6 @@ const UserProfileActions = ({ user, isExpanded }) => {
     );
   };
 
-// --- [KOMPONEN WIDGET STATUS SISTEM (FUNGSI PING DIPERBAIKI)] ---
 const SystemStatusWidget = ({ isExpanded, isOnline }) => {
     const [time, setTime] = useState(new Date());
     const [latency, setLatency] = useState(0);
@@ -181,16 +180,13 @@ const SystemStatusWidget = ({ isExpanded, isOnline }) => {
     useEffect(() => {
         const timer = setInterval(() => setTime(new Date()), 1000);
         
-        // [PERBAIKAN] Logika ping untuk mengukur latency bolak-balik
         const measureLatency = () => {
             const startTime = Date.now();
-            // Kirim 'ping' bersama dengan waktu mulai
             socket.emit('ping', startTime); 
         };
 
         const latencyTimer = setInterval(measureLatency, 3000);
         
-        // Listener untuk event 'pong' dari server
         socket.on('pong', (startTime) => {
             const duration = Date.now() - startTime;
             setLatency(duration);
@@ -199,7 +195,7 @@ const SystemStatusWidget = ({ isExpanded, isOnline }) => {
         return () => { 
             clearInterval(timer); 
             clearInterval(latencyTimer);
-            socket.off('pong'); // Hapus listener saat komponen dilepas
+            socket.off('pong');
         };
     }, []);
 
@@ -221,10 +217,9 @@ const SystemStatusWidget = ({ isExpanded, isOnline }) => {
     )
 }
 
-// ... (Komponen utama Sidebar tetap sama) ...
 const Sidebar = ({ isExpanded }) => {
     const [isServerOnline, setIsServerOnline] = useState(socket.connected);
-    const [user, setUser] = useState({ name: 'Guest', role: 'Guest', avatar: null });
+    const [user, setUser] = useState({ name: 'Guest', username: 'guest', role: 'Guest', avatar: null });
   
     const menuItems = [
       { icon: FiLayout, text: 'Dashboard', to: '/admin/dashboard' },
@@ -251,6 +246,7 @@ const Sidebar = ({ isExpanded }) => {
                   setUser(response.data);
               } catch (error) {
                   console.error("Gagal mengambil data user untuk sidebar:", error);
+                  // Fallback ke data dari local storage jika API gagal
                   setUser(storedUser);
               }
           }

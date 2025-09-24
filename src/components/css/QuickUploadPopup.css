@@ -1,0 +1,131 @@
+.upload-popup-card {
+    position: fixed;
+    bottom: 0;
+    right: 2rem;
+    width: 420px;
+    max-width: 90vw;
+    background-color: white;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15), 0 -1px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f0f0f0;
+    border-bottom: none;
+    z-index: 1000;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+.upload-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    background-color: #f9fafb;
+    border-radius: 12px 12px 0 0;
+}
+
+.upload-popup-header h3 {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.header-icon-button {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    border-radius: 50%;
+    color: #6b7280;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.header-icon-button:hover {
+    background-color: #f3f4f6;
+    color: #1d4ed8;
+}
+
+.upload-popup-content {
+    overflow: hidden;
+}
+
+.dropzone-area {
+    margin: 1rem;
+    padding: 1.5rem;
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.2s ease-in-out;
+}
+
+.dropzone-area.active {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+}
+
+.file-list-container {
+    padding: 0 1rem;
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.upload-file-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+}
+
+.file-item-icon {
+    flex-shrink: 0;
+    font-size: 1.75rem;
+}
+
+.file-item-details {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.file-item-details p {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-item-details span {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.progress-bar-bg {
+    width: 100%;
+    background-color: #e5e7eb;
+    height: 6px;
+    border-radius: 9999px;
+    margin-top: 4px;
+}
+
+.progress-bar-fg {
+    height: 100%;
+    background-color: #3b82f6;
+    border-radius: 9999px;
+}
+
+.upload-popup-footer {
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    border-top: 1px solid #f0f0f0;
+    background-color: #f9fafb;
+}

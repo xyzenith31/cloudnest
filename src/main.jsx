@@ -4,12 +4,15 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
 import { AuthProvider } from './context/AuthContext';
+import { UploadProvider } from './context/UploadContext';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider> {/* <-- BUNGKUS DENGAN AUTHPROVIDER */}
-        <App />
+      <AuthProvider>
+        <UploadProvider> {/* <-- [BARU] Bungkus dengan UploadProvider */}
+          <App />
+        </UploadProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,
