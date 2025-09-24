@@ -174,8 +174,8 @@ const UploadFile = () => {
     const [history, setHistory] = useState([]);
     const [totalSize, setTotalSize] = useState(0);
     const [notification, setNotification] = useState({ message: '', type: '' });
-    const [isStorageModalOpen, setIsStorageModalOpen] = useState(false); // <-- [BARU] State untuk modal
-    const [pendingUploadSize, setPendingUploadSize] = useState(0); // <-- [BARU] State untuk ukuran file yg akan diupload
+    const [isStorageModalOpen, setIsStorageModalOpen] = useState(false);
+    const [pendingUploadSize, setPendingUploadSize] = useState(0);
 
     const fetchInitialData = async () => {
         try {
@@ -200,13 +200,13 @@ const UploadFile = () => {
         setPendingFiles(prev => [...prev, ...newFiles]);
     }, []);
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { '*': [] } });
+    // [PERBAIKAN] Hapus `accept: { '*': [] }` untuk menerima semua file secara default dan aman
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
     const removeFile = (id, listSetter) => {
         listSetter(prev => prev.filter(f => f.id !== id));
     };
     
-    // --- [DIUBAH] Fungsi handleUpload dengan pengecekan kapasitas ---
     const handleUpload = () => {
         const storageLimit = 10 * 1024 * 1024 * 1024; // 10 GB
         const sizeOfPendingFiles = pendingFiles.reduce((acc, file) => acc + file.size, 0);
@@ -214,7 +214,7 @@ const UploadFile = () => {
         if (totalSize + sizeOfPendingFiles > storageLimit) {
             setPendingUploadSize(sizeOfPendingFiles);
             setIsStorageModalOpen(true);
-            return; // Hentikan proses upload
+            return;
         }
 
         const filesToUpload = pendingFiles;
@@ -232,11 +232,21 @@ const UploadFile = () => {
                 });
     
                 setUploadingFiles(prev => prev.filter(f => f.id !== file.id));
-                setHistory(h => [response.data, ...h]);
+                // Tambahkan file yang berhasil diupload ke history
+                setHistory(h => [response.data, ...h.filter(item => item.id !== file.id)]);
                 setTotalSize(prevSize => prevSize + response.data.fileSize);
     
             } catch (err) {
-                const errorMessage = err.response?.data?.message || 'Upload gagal';
+                 // [PERBAIKAN] Tambahkan penanganan untuk error spesifik
+                let errorMessage = 'Upload gagal. Terjadi kesalahan server.';
+                if (err.response) {
+                    if (err.response.status === 409) {
+                        errorMessage = 'Gagal: File dengan nama ini sudah ada.';
+                    } else if (err.response.data && err.response.data.message) {
+                        errorMessage = err.response.data.message;
+                    }
+                }
+
                 setUploadingFiles(prev => prev.filter(f => f.id !== file.id));
                 setHistory(h => [{ ...file, status: 'failed', date: new Date().toISOString(), error: errorMessage }, ...h]);
             }
@@ -247,7 +257,6 @@ const UploadFile = () => {
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
             <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
             
-            {/* [BARU] Render Modal Peringatan Kapasitas */}
             <StorageLimitModal 
                 isOpen={isStorageModalOpen}
                 onClose={() => setIsStorageModalOpen(false)}
@@ -313,8 +322,6 @@ const UploadFile = () => {
                     <FileSection
                         title="Riwayat Upload"
                         files={history}
-                        onClear={() => setHistory([])}
-                        canClear={history.length > 0}
                     />
                 </div>
             </div>
