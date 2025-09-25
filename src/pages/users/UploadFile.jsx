@@ -2,16 +2,15 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    FiUploadCloud, FiFile, FiX, FiCheckCircle, FiLoader, FiAlertTriangle, FiTrash2, FiClock, FiHardDrive
+    FiUploadCloud, FiFile, FiX, FiCheckCircle, FiLoader, FiAlertTriangle, FiTrash2,
+    FiHardDrive, FiImage, FiVideo, FiFileText, FiArchive, FiCpu, FiMusic, FiFolderPlus
 } from 'react-icons/fi';
-import { 
-    FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid,
-    FaFilePowerpoint, FaFileExcel, FaWindows, FaApple 
-} from 'react-icons/fa';
+import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid, FaFilePowerpoint, FaFileExcel, FaWindows, FaApple } from 'react-icons/fa';
 import { uploadFile, getUserFiles } from '../../services/fileService';
 import Notification from '../../components/Notification';
+import './ui/UploadFile.css';
 
-// --- [PERBAIKAN UTAMA] Helper Functions (Ikon & Format Ukuran) ---
+// --- (Helper Functions dan Komponen FileItem tidak berubah) ---
 const getFileIcon = (fileType, fileName = '') => {
     const extension = fileName.slice(fileName.lastIndexOf('.')).toLowerCase();
     if (fileType.startsWith('image/')) return <FaFileImage className="text-purple-500" />;
@@ -26,8 +25,6 @@ const getFileIcon = (fileType, fileName = '') => {
     if (extension === '.dmg' || extension === '.ipa') return <FaApple className="text-gray-600" />;
     return <FiFile className="text-gray-500" />;
 };
-
-
 const formatBytes = (bytes, decimals = 2) => {
     if (!+bytes) return '0 Bytes';
     const k = 1024;
@@ -36,49 +33,77 @@ const formatBytes = (bytes, decimals = 2) => {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 };
-
-// ... (Komponen Lainnya seperti StorageLimitModal, StorageCard, dll. tetap sama) ...
-const StorageLimitModal=({isOpen,onClose,pendingSize,currentSize,limit})=>{if(!isOpen)return null;return(<motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4"><motion.div initial={{scale:0.9,y:20}} animate={{scale:1,y:0}} exit={{scale:0.9,y:20}} className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 text-center"><div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto"><FiAlertTriangle className="text-4xl text-red-500"/></div><h2 className="text-xl font-bold my-4">Kapasitas Penyimpanan Tidak Cukup</h2><p className="text-gray-600">Anda mencoba mengunggah <strong className="text-red-600">{formatBytes(pendingSize)}</strong>, namun sisa penyimpanan Anda hanya <strong className="text-blue-600">{formatBytes(limit-currentSize)}</strong>.</p><p className="text-gray-600 mt-2">Total penyimpanan akan menjadi <strong className="text-red-600">{formatBytes(currentSize+pendingSize)}</strong> dari <strong className="text-blue-600">{formatBytes(limit)}</strong>.</p><div className="flex justify-center mt-6"><motion.button onClick={onClose} whileHover={{scale:1.05}} className="px-8 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 font-semibold">Mengerti</motion.button></div></motion.div></motion.div>)};
-const StorageCard=({usedStorage})=>{const totalStorage=10*1024*1024*1024;const usagePercentage=(usedStorage/totalStorage)*100;return(<motion.div className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.3}}><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2"><FiHardDrive/>Penyimpanan</h2></div><div className="space-y-2"><p className="text-center text-3xl font-bold text-gray-800">{formatBytes(usedStorage,1)}<span className="text-lg text-gray-500">/10 GB</span></p><div className="w-full bg-gray-200 rounded-full h-2.5"><motion.div className="bg-gradient-to-r from-sky-500 to-blue-500 h-2.5 rounded-full" initial={{width:0}} animate={{width:`${usagePercentage}%`}} transition={{duration:1,ease:'easeOut',delay:0.5}}/></div><div className="text-center text-sm text-gray-500 pt-1">{usagePercentage.toFixed(1)}% terpakai</div></div></motion.div>)};
-const FileSection=({title,files,onRemove,onClear,canClear,children})=>(<motion.div className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.2}}><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-semibold text-gray-800">{title}</h2>{canClear&&(<motion.button whileHover={{scale:1.1}} whileTap={{scale:0.9}} onClick={onClear} className="text-sm font-semibold text-red-500 hover:text-red-700 flex items-center gap-1"><FiTrash2/> Bersihkan</motion.button>)}</div><div className="space-y-3 max-h-96 overflow-y-auto pr-2 flex-grow"><AnimatePresence>{files.map(file=><FileItem key={file.id||file._id} file={file} onRemove={()=>onRemove&&onRemove(file.id)}/>)}</AnimatePresence>{files.length===0&&<p className="text-center text-gray-400 py-4">Tidak ada file.</p>}</div>{children}</motion.div>);
 const FileItem = ({ file, onRemove }) => {
-    const statusIcons = {
-        uploading: <FiLoader className="text-blue-500 text-2xl animate-spin" />,
-        completed: <FiCheckCircle className="text-green-500 text-2xl" />,
-        failed: <FiAlertTriangle className="text-red-500 text-2xl" />,
-    };
-
+    const statusIcons = { uploading: <FiLoader className="text-blue-500 animate-spin" />, completed: <FiCheckCircle className="text-green-500" />, failed: <FiAlertTriangle className="text-red-500" />, };
     return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, x: -50, transition: { duration: 0.3 } }}
-            className="bg-white p-3 rounded-lg shadow border flex items-center gap-4"
-        >
-            <div className="text-3xl flex-shrink-0 w-8 text-center">{getFileIcon(file.type || file.fileType || '', file.name || file.fileName || '')}</div>
-            <div className="flex-grow min-w-0">
-                <p className="font-semibold text-gray-800 truncate">{file.name || file.fileName}</p>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <span>{formatBytes(file.size || file.fileSize)}</span>
-                    {file.date && <><span>•</span> <FiClock size={12}/> <span>{new Date(file.date).toLocaleDateString()}</span></>}
-                </div>
-                {file.status === 'uploading' && (
-                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                        <motion.div
-                            className="bg-blue-500 h-1.5 rounded-full"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${file.progress || 0}%`}}
-                        />
-                    </div>
-                )}
-                 {file.status === 'failed' && <p className="text-xs text-red-500 mt-1">{file.error || 'Gagal'}</p>}
+        <motion.div layout initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50, transition: { duration: 0.3 } }} className="file-item-card" >
+            <div className="file-item-icon">{getFileIcon(file.type || file.fileType || '', file.name || file.fileName || '')}</div>
+            <div className="file-item-details">
+                <p className="file-item-name">{file.name || file.fileName}</p>
+                <p className="file-item-info">{formatBytes(file.size || file.fileSize)}</p>
+                {file.status === 'uploading' && (<div className="progress-bar-container"><motion.div className="progress-bar-fill" initial={{ width: 0 }} animate={{ width: `${file.progress || 0}%`}} /></div>)}
+                {file.status === 'failed' && <p className="text-xs text-red-500 mt-1">{file.error || 'Gagal'}</p>}
             </div>
-            <div className="w-8 h-8 flex items-center justify-center">
-                {file.status === 'pending'
-                    ? <motion.button whileTap={{ scale: 0.9 }} onClick={onRemove} className="p-1 rounded-full hover:bg-gray-100 text-gray-500"><FiX /></motion.button>
-                    : statusIcons[file.status]
-                }
+            <div className="file-item-status"> {file.status === 'pending' ? <motion.button whileTap={{ scale: 0.9 }} onClick={onRemove} className="p-1 rounded-full hover:bg-gray-100 text-gray-500"><FiX /></motion.button> : statusIcons[file.status]} </div>
+        </motion.div>
+    );
+};
+
+
+// --- [DIPERBAIKI] Komponen FilesSection dengan Teks Tengah ---
+const FilesSection = ({ title, icon, files, onRemove, onClear, children, className = '' }) => (
+    <motion.div 
+        className={`files-section ${className}`}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+    >
+        <div className="section-header">
+            <h2 className="section-title">{icon} {title}</h2>
+            {onClear && files.length > 0 && (
+                <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={onClear} className="clear-button">
+                    <FiTrash2 size={14}/> Bersihkan
+                </motion.button>
+            )}
+        </div>
+        <div className="file-list">
+            <AnimatePresence>
+                {files.map(file => <FileItem key={file.id || file._id} file={file} onRemove={() => onRemove && onRemove(file.id)} />)}
+            </AnimatePresence>
+            
+            {/* [PERBAIKAN] Bungkus teks dalam div flexbox untuk membuatnya pas di tengah */}
+            {files.length === 0 && (
+                <div className="flex-grow flex items-center justify-center h-full">
+                    <p className="text-gray-500">Tidak ada file di sini.</p>
+                </div>
+            )}
+        </div>
+        {children}
+    </motion.div>
+);
+
+// --- (Komponen StorageHub dan Komponen Utama UploadFile tidak ada perubahan, jadi saya persingkat) ---
+const StorageHub = ({ usedStorage, files }) => {
+    const totalStorage = 10 * 1024 * 1024 * 1024;
+    const usagePercentage = (usedStorage / totalStorage) * 100;
+    const categoryData = useMemo(() => {
+        const categories = { foto: { icon: FiImage, label: 'Gambar', size: 0, color: 'bg-purple-500' }, video: { icon: FiVideo, label: 'Video', size: 0, color: 'bg-indigo-500' }, music: { icon: FiMusic, label: 'Audio', size: 0, color: 'bg-pink-500' }, dokumen: { icon: FiFileText, label: 'Dokumen', size: 0, color: 'bg-blue-500' }, arsip: { icon: FiArchive, label: 'Arsip', size: 0, color: 'bg-yellow-500' }, apk: { icon: FiCpu, label: 'Aplikasi', size: 0, color: 'bg-green-500' }, };
+        files.forEach(file => { if (categories[file.category]) { categories[file.category].size += file.fileSize; } });
+        return Object.values(categories).filter(c => c.size > 0);
+    }, [files]);
+    return (
+        <motion.div className="storage-hub" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <div className="section-header"> <h2 className="section-title"><FiHardDrive />Pusat Penyimpanan</h2> </div>
+            <p className="text-center text-3xl font-bold text-gray-800">{formatBytes(usedStorage, 1)} <span className="text-lg text-gray-500"> / 10 GB</span> </p>
+            <div className="w-full bg-gray-200 rounded-full h-2.5 my-3"> <motion.div className="bg-gradient-to-r from-sky-500 to-blue-500 h-2.5 rounded-full" initial={{ width: 0 }} animate={{ width: `${usagePercentage}%`}} transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }} /> </div>
+            <div className="storage-category-list">
+                {categoryData.map(cat => (
+                    <div key={cat.label} className="category-item">
+                        <div className={`category-icon ${cat.color}`}><cat.icon /></div>
+                        <div className="flex-grow"> <p className="font-semibold text-gray-700">{cat.label}</p> </div>
+                        <p className="font-medium text-gray-600">{formatBytes(cat.size)}</p>
+                    </div>
+                ))}
             </div>
         </motion.div>
     );
@@ -89,154 +114,91 @@ const UploadFile = () => {
     const [uploadingFiles, setUploadingFiles] = useState([]);
     const [history, setHistory] = useState([]);
     const [totalSize, setTotalSize] = useState(0);
+    const [allFiles, setAllFiles] = useState([]);
     const [notification, setNotification] = useState({ message: '', type: '' });
-    const [isStorageModalOpen, setIsStorageModalOpen] = useState(false);
-    const [pendingUploadSize, setPendingUploadSize] = useState(0);
-
-    const fetchInitialData = async () => {
-        try {
-            const response = await getUserFiles();
-            setHistory(response.data.files);
-            setTotalSize(response.data.totalSize);
-        } catch (error) {
-            console.error("Gagal memuat riwayat upload:", error);
-        }
-    };
-    
-    useEffect(() => {
-        fetchInitialData();
-    }, []);
-
+    const fetchInitialData = async () => { try { const response = await getUserFiles(); setHistory(response.data.files.slice(0, 10)); setAllFiles(response.data.files); setTotalSize(response.data.totalSize); } catch (error) { console.error("Gagal memuat data:", error); } };
+    useEffect(() => { fetchInitialData(); }, []);
     const onDrop = useCallback(acceptedFiles => {
-        const newFiles = acceptedFiles.map((file, index) => Object.assign(file, {
-            id: `pending-${Date.now()}-${index}`,
-            preview: URL.createObjectURL(file),
-            status: 'pending'
-        }));
-        setPendingFiles(prev => [...prev, ...newFiles]);
-    }, []);
-
-    // --- [PERBAIKAN UTAMA] Menghapus properti 'accept' dari useDropzone ---
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
-
-    const removeFile = (id, listSetter) => {
-        listSetter(prev => prev.filter(f => f.id !== id));
-    };
-    
-    const handleUpload = () => {
-        const storageLimit = 10 * 1024 * 1024 * 1024; // 10 GB
+        const storageLimit = 10 * 1024 * 1024 * 1024;
         const sizeOfPendingFiles = pendingFiles.reduce((acc, file) => acc + file.size, 0);
-
-        if (totalSize + sizeOfPendingFiles > storageLimit) {
-            setPendingUploadSize(sizeOfPendingFiles);
-            setIsStorageModalOpen(true);
-            return;
-        }
-
+        const sizeOfNewFiles = acceptedFiles.reduce((acc, file) => acc + file.size, 0);
+        if (totalSize + sizeOfPendingFiles + sizeOfNewFiles > storageLimit) { setNotification({ message: 'Penyimpanan tidak cukup untuk file baru.', type: 'error' }); return; }
+        const newFiles = acceptedFiles.map((file, index) => Object.assign(file, { id: `pending-${Date.now()}-${index}`, status: 'pending' }));
+        setPendingFiles(prev => [...prev, ...newFiles]);
+    }, [pendingFiles, totalSize]);
+    const { getRootProps, getInputProps, isDragActive, open } = useDropzone({ onDrop, noClick: true });
+    const handleUpload = () => {
         const filesToUpload = pendingFiles;
         setPendingFiles([]);
         setUploadingFiles(prev => [...prev, ...filesToUpload.map(f => ({ ...f, status: 'uploading', progress: 0 }))]);
-    
         filesToUpload.forEach(async (file) => {
             const formData = new FormData();
             formData.append('file', file);
-    
             try {
                 const response = await uploadFile(formData, (progressEvent) => {
                     const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     setUploadingFiles(prev => prev.map(f => f.id === file.id ? { ...f, progress: percentCompleted } : f));
                 });
-    
                 setUploadingFiles(prev => prev.filter(f => f.id !== file.id));
-                setHistory(h => [response.data, ...h.filter(item => item.id !== file.id)]);
-                setTotalSize(prevSize => prevSize + response.data.fileSize);
-    
+                fetchInitialData();
+                setNotification({ message: `"${response.data.fileName}" berhasil diunggah!`, type: 'success' });
             } catch (err) {
-                let errorMessage = 'Upload gagal. Terjadi kesalahan server.';
-                if (err.response) {
-                    if (err.response.status === 409) {
-                        errorMessage = 'Gagal: File dengan nama ini sudah ada.';
-                    } else if (err.response.data && err.response.data.message) {
-                        errorMessage = err.response.data.message;
-                    }
-                }
-
+                const errorMessage = err.response?.data?.message || 'Upload gagal.';
                 setUploadingFiles(prev => prev.filter(f => f.id !== file.id));
-                setHistory(h => [{ ...file, status: 'failed', date: new Date().toISOString(), error: errorMessage }, ...h]);
+                setPendingFiles(prev => [{ ...file, status: 'failed', error: errorMessage }, ...prev]);
+                setNotification({ message: `Gagal mengunggah "${file.name}": ${errorMessage}`, type: 'error' });
             }
         });
     };
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+        <div className="upload-page-container">
             <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
             
-            <StorageLimitModal 
-                isOpen={isStorageModalOpen}
-                onClose={() => setIsStorageModalOpen(false)}
-                pendingSize={pendingUploadSize}
-                currentSize={totalSize}
-                limit={10 * 1024 * 1024 * 1024}
-            />
-
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
-                <h1 className="text-4xl font-bold text-gray-800">Unggah File Anda</h1>
-                <p className="text-gray-500 mt-1">Seret dan letakkan file di sini untuk memulai.</p>
+                <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight">Unggah File Anda</h1>
+                <p className="text-gray-500 mt-1">Seret dan letakkan file di mana saja untuk memulai.</p>
             </motion.div>
 
-            <motion.div
-                {...getRootProps()}
-                className={`relative border-4 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 group
-                ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:border-blue-400'}`}
-                whileHover={{ scale: 1.01 }}
-            >
-                <input {...getInputProps()} />
-                <motion.div
-                    animate={{ y: isDragActive ? -10 : 0 }}
-                    className="flex flex-col items-center justify-center space-y-3"
-                >
-                    <FiUploadCloud className={`text-6xl transition-colors ${isDragActive ? 'text-blue-600' : 'text-gray-400'}`} />
-                    <p className="text-lg font-semibold text-gray-700">
-                        {isDragActive ? 'Lepaskan file di sini!' : 'Seret & Lepas atau Klik untuk Memilih'}
-                    </p>
-                    <p className="text-sm text-gray-500">Ukuran file maksimal 2GB. Semua jenis file didukung.</p>
-                </motion.div>
-            </motion.div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-2">
-                    <FileSection
-                        title={`Siap Diunggah (${pendingFiles.length})`}
+            <div className="upload-grid mt-8">
+                <div className="upload-main-column flex flex-col space-y-8">
+                    <motion.div {...getRootProps()} className={`dropzone-reimagined ${isDragActive ? 'active' : ''}`} whileHover={{ scale: 1.02 }} >
+                        <input {...getInputProps()} />
+                        <motion.div className="dropzone-content" animate={{ y: isDragActive ? -10 : 0 }}>
+                            <FiUploadCloud className={`text-6xl transition-colors ${isDragActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                            <p className="text-lg font-semibold">{isDragActive ? 'Lepaskan file di sini!' : 'Seret & Lepas File'}</p>
+                            <p>atau <button onClick={(e) => {e.stopPropagation(); open();}} className="text-blue-600 font-semibold hover:underline">pilih dari perangkat</button></p>
+                            <p className="text-sm text-gray-400 mt-2">Ukuran file maksimal 2GB</p>
+                        </motion.div>
+                    </motion.div>
+                    
+                    <FilesSection
+                        className="flex-grow"
+                        title={`Antrian (${pendingFiles.length})`}
+                        icon={<FiFolderPlus />}
                         files={pendingFiles}
-                        onRemove={(id) => removeFile(id, setPendingFiles)}
+                        onRemove={(id) => setPendingFiles(p => p.filter(f => f.id !== id))}
                         onClear={() => setPendingFiles([])}
-                        canClear={pendingFiles.length > 0}
                     >
-                        {pendingFiles.length > 0 && (
-                            <div className="mt-6 flex justify-end">
+                        {(pendingFiles.length > 0 || uploadingFiles.length > 0) && (
+                            <div className="mt-6 flex justify-end flex-shrink-0">
                                 <motion.button
                                     whileHover={{ scale: 1.05, boxShadow: '0 8px 20px rgba(59,130,246,0.4)' }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={handleUpload}
-                                    className="bg-blue-500 text-white font-bold px-8 py-3 rounded-full shadow-lg"
+                                    disabled={pendingFiles.length === 0}
+                                    className="bg-blue-500 text-white font-bold px-8 py-3 rounded-full shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
                                 >
-                                    Unggah {pendingFiles.length} File
+                                    {uploadingFiles.length > 0 ? 'Mengunggah...' : `Unggah ${pendingFiles.length} File`}
                                 </motion.button>
                             </div>
                         )}
-                    </FileSection>
+                    </FilesSection>
                 </div>
-
-                <div className="lg:col-span-1 space-y-8">
-                    <FileSection
-                        title={`Sedang Diunggah (${uploadingFiles.length})`}
-                        files={uploadingFiles}
-                    />
-                    <StorageCard usedStorage={totalSize} />
-                    <FileSection
-                        title="Riwayat Upload"
-                        files={history}
-                    />
+                
+                <div className="upload-sidebar-column flex flex-col space-y-8">
+                    <StorageHub usedStorage={totalSize} files={allFiles} />
+                    <FilesSection title="Riwayat Terbaru" icon={<FiFileText />} files={history} />
                 </div>
             </div>
         </div>

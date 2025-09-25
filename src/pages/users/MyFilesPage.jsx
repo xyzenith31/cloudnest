@@ -10,9 +10,9 @@ import SortDropdown from '../../components/SortDropdown';
 import FileDetailModal from '../../components/FileDetailModal';
 import NewFolderModal from '../../components/NewFolderModal';
 import MoveFilesModal from '../../components/MoveFilesModal';
-import DownloadAllModal from '../../components/DownloadAllModal'; // <-- [BARU] Import modal unduh semua
+import DownloadAllModal from '../../components/DownloadAllModal';
 import { useAuth } from '../../context/AuthContext';
-import { getUserFiles, deleteFile, deleteAllFiles, createFolder, moveFiles, updateFile, downloadFile, downloadAllFiles } from '../../services/fileService'; // <-- [BARU] Import deleteAllFiles & downloadAllFiles
+import { getUserFiles, deleteFile, deleteAllFiles, createFolder, moveFiles, updateFile, downloadFile, downloadAllFiles } from '../../services/fileService';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Notification from '../../components/Notification';
 
@@ -144,7 +144,7 @@ const MyFilesPage = () => {
     const [notification, setNotification] = useState({ message: '', type: '' });
     const [totalSize, setTotalSize] = useState(0);
     const [filter, setFilter] = useState('all');
-    const [viewMode, setViewMode] = useState('grid');
+    const [viewMode, setViewMode] = useState('list');
     const [sort, setSort] = useState({ by: 'createdAt', order: 'desc' });
     const [selectedFile, setSelectedFile] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -154,7 +154,6 @@ const MyFilesPage = () => {
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, items: [] });
     
-    // --- [BARU] State untuk modal-modal baru ---
     const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
     const [isDownloadAllModalOpen, setIsDownloadAllModalOpen] = useState(false);
     
@@ -226,7 +225,25 @@ const MyFilesPage = () => {
         }
     };
 
-    // --- Actions ---
+    const handleUpdateFile = async (updateData) => {
+        const fileIdToUpdate = selectedFile?._id || updateData._id;
+        if (!fileIdToUpdate) return;
+        
+        setAllFiles(prevFiles => prevFiles.map(f => f._id === fileIdToUpdate ? { ...f, ...updateData } : f));
+        if (selectedFile) setSelectedFile(prev => ({...prev, ...updateData}));
+
+        try {
+            await updateFile(fileIdToUpdate, updateData);
+            setNotification({ message: 'File berhasil diperbarui', type: 'success' });
+            fetchFiles(); 
+        } catch (error) {
+            setNotification({ message: 'Gagal memperbarui file', type: 'error' });
+            fetchFiles();
+        } finally {
+             if (selectedFile) setSelectedFile(null);
+        }
+    };
+
     const handleDeleteConfirmation = () => {
         const itemsToDelete = allFiles.filter(f => selectedItems.includes(f._id));
         setDeleteConfirmation({
@@ -237,40 +254,32 @@ const MyFilesPage = () => {
         });
     };
     
-    // --- [BARU] Fungsi untuk menghapus semua file ---
     const executeDeleteAll = async () => {
         try {
             await deleteAllFiles();
             setNotification({ message: 'Semua file berhasil dihapus', type: 'success' });
-            fetchFiles(); // Refresh file list
+            fetchFiles();
         } catch (error) {
             setNotification({ message: 'Gagal menghapus semua file', type: 'error' });
         } finally {
-            setIsDeleteAllModalOpen(false); // Tutup modal
+            setIsDeleteAllModalOpen(false);
         }
     };
 
     const executeDelete = async () => {
         const itemsToDelete = deleteConfirmation.items;
-        
-        // [FIX] Simpan state saat ini jika terjadi error
         const previousFiles = [...allFiles];
-        
-        // [FIX] Optimistic UI Update: Langsung hapus item dari state
         setAllFiles(prevFiles => prevFiles.filter(f => !itemsToDelete.some(item => item._id === f._id)));
         setDeleteConfirmation({ isOpen: false, items: [] });
         setSelectedItems([]);
-
         try {
             for (const item of itemsToDelete) {
                 await deleteFile(item._id);
             }
             setNotification({ message: `${itemsToDelete.length} item berhasil dihapus`, type: 'success' });
-            // Fetch ulang untuk sinkronisasi data di background
             fetchFiles(); 
         } catch (error) {
             setNotification({ message: 'Gagal menghapus item, mengembalikan data.', type: 'error' });
-            // Kembalikan state jika gagal
             setAllFiles(previousFiles);
         }
     };
@@ -298,144 +307,135 @@ const MyFilesPage = () => {
         }
     };
 
-    const handleUpdateFile = async (updatedData) => {
-        try {
-            await updateFile(selectedFile._id, updatedData);
-            setNotification({ message: 'File berhasil diperbarui', type: 'success' });
-            fetchFiles();
-        } catch (error) {
-            setNotification({ message: 'Gagal memperbarui file', type: 'error' });
-        } finally {
-            setSelectedFile(null);
-        }
-    };
-
-
     return (
         <div className="flex flex-col lg:flex-row gap-8 p-4 md:p-8">
             <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
             <Sidebar activeFilter={filter} setActiveFilter={setFilter} usagePercentage={usagePercentage} />
             <main className="flex-1 min-w-0">
                 <motion.div
-                    className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50"
+                    className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col h-[calc(100vh-4rem)]"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                    <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
-                        <div>
-                            <h1 className="text-4xl font-bold text-gray-800">File Saya</h1>
-                            <p className="text-gray-500">Total {filteredAndSortedFiles.length} item di folder ini.</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <SortDropdown sort={sort} setSort={setSort} />
-                            <div className="flex items-center bg-gray-200 p-1 rounded-full">
-                                <button onClick={() => setViewMode('list')} className={`p-2 rounded-full transition-colors ${viewMode === 'list' ? 'bg-white text-blue-500 shadow' : 'text-gray-500'}`}><FiList/></button>
-                                <button onClick={() => setViewMode('grid')} className={`p-2 rounded-full transition-colors ${viewMode === 'grid' ? 'bg-white text-blue-500 shadow' : 'text-gray-500'}`}><FiGrid/></button>
+                    <div className="flex-shrink-0">
+                        <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+                            <div>
+                                <h1 className="text-4xl font-bold text-gray-800">File Saya</h1>
+                                <p className="text-gray-500">Total {filteredAndSortedFiles.length} item di folder ini.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <SortDropdown sort={sort} setSort={setSort} />
+                                <div className="flex items-center bg-gray-200 p-1 rounded-full">
+                                    <button onClick={() => setViewMode('list')} className={`p-2 rounded-full transition-colors ${viewMode === 'list' ? 'bg-white text-blue-500 shadow' : 'text-gray-500'}`}><FiList/></button>
+                                    <button onClick={() => setViewMode('grid')} className={`p-2 rounded-full transition-colors ${viewMode === 'grid' ? 'bg-white text-blue-500 shadow' : 'text-gray-500'}`}><FiGrid/></button>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="flex items-center gap-4 mb-4 flex-wrap">
-                         <div className="relative flex-grow">
-                            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Cari file di folder ini..."
-                                className="w-full pl-10 pr-4 py-3 border border-gray-200 bg-white rounded-full focus:ring-2 focus:ring-blue-400 outline-none transition-all"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        {/* --- [BARU] Tombol Aksi --- */}
-                        <motion.button onClick={() => setCreateFolderModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-blue-500 text-white font-semibold rounded-full shadow-md hover:bg-blue-600">
-                            <FiPlus />
-                            <span>Folder Baru</span>
-                        </motion.button>
-                        <motion.button onClick={() => setIsDownloadAllModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-green-500 text-white font-semibold rounded-full shadow-md hover:bg-green-600">
-                            <FiDownload />
-                            <span>Unduh Semua</span>
-                        </motion.button>
-                        <motion.button onClick={() => setIsDeleteAllModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-red-500 text-white font-semibold rounded-full shadow-md hover:bg-red-600">
-                            <FiTrash2 />
-                            <span>Hapus Semua</span>
-                        </motion.button>
-                    </div>
-
-                    <div className="flex items-center text-sm text-gray-500 mb-4 p-2 bg-gray-50 rounded-lg">
-                        {folderPath.map((folder, index) => (
-                            <div key={folder._id || 'root'} className="flex items-center">
-                                <button
-                                    onClick={() => handleBreadcrumbClick(index)}
-                                    className="hover:text-blue-600 hover:underline font-semibold"
-                                >
-                                    {index === 0 ? <FiHome className="inline-block mr-2"/> : ''}
-                                    {folder.fileName}
-                                </button>
-                                {index < folderPath.length - 1 && <FiChevronRight className="mx-1"/>}
+                        <div className="flex items-center gap-4 mb-4 flex-wrap">
+                             <div className="relative flex-grow">
+                                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Cari file di folder ini..."
+                                    className="w-full pl-10 pr-4 py-3 border border-gray-200 bg-white rounded-full focus:ring-2 focus:ring-blue-400 outline-none transition-all"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
-                        ))}
-                    </div>
-
-                    {selectedItems.length > 0 && (
-                        <div className="flex items-center gap-4 mb-4 p-3 bg-blue-50 rounded-lg">
-                            <p className="font-semibold text-blue-800">{selectedItems.length} item dipilih</p>
-                            <motion.button onClick={() => setIsMoveModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white font-semibold rounded-full shadow-md hover:bg-indigo-600 text-sm">
-                                <FiMove />
-                                <span>Pindahkan</span>
+                            <motion.button onClick={() => setCreateFolderModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-blue-500 text-white font-semibold rounded-full shadow-md hover:bg-blue-600">
+                                <FiPlus />
+                                <span>Folder Baru</span>
                             </motion.button>
-                             <motion.button onClick={handleDeleteConfirmation} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white font-semibold rounded-full shadow-md hover:bg-red-600 text-sm">
+                            <motion.button onClick={() => setIsDownloadAllModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-green-500 text-white font-semibold rounded-full shadow-md hover:bg-green-600">
+                                <FiDownload />
+                                <span>Unduh Semua</span>
+                            </motion.button>
+                            <motion.button onClick={() => setIsDeleteAllModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-red-500 text-white font-semibold rounded-full shadow-md hover:bg-red-600">
                                 <FiTrash2 />
-                                <span>Hapus</span>
+                                <span>Hapus Semua</span>
                             </motion.button>
                         </div>
-                    )}
 
-                    {isLoading ? <div className="flex justify-center p-10"><LoadingSpinner/></div> :
-                    <>
-                    <div className="flex items-center px-4 py-2">
-                        <input
-                            type="checkbox"
-                            className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                            onChange={handleSelectAll}
-                            checked={filteredAndSortedFiles.length > 0 && selectedItems.length === filteredAndSortedFiles.length}
-                        />
-                        <label className="ml-3 text-sm font-medium text-gray-700">Pilih Semua</label>
-                    </div>
-                    <motion.div
-                        key={viewMode}
-                        className={`mt-4 ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}`}
-                    >
-                        <AnimatePresence>
-                            {filteredAndSortedFiles.map(file => (
-                                viewMode === 'list'
-                                    ? <FileListItem
-                                        key={file._id}
-                                        file={file}
-                                        allFiles={allFiles}
-                                        onItemClick={(e) => handleItemClick(file, e)}
-                                        onToggleSelect={() => handleToggleSelect(file._id)}
-                                        isSelected={selectedItems.includes(file._id)}
-                                      />
-                                    : <FileGridItem
-                                        key={file._id}
-                                        file={file}
-                                        allFiles={allFiles}
-                                        onItemClick={(e) => handleItemClick(file, e)}
-                                        onToggleSelect={() => handleToggleSelect(file._id)}
-                                        isSelected={selectedItems.includes(file._id)}
-                                      />
+                        <div className="flex items-center text-sm text-gray-500 mb-4 p-2 bg-gray-50 rounded-lg">
+                            {folderPath.map((folder, index) => (
+                                <div key={folder._id || 'root'} className="flex items-center">
+                                    <button
+                                        onClick={() => handleBreadcrumbClick(index)}
+                                        className="hover:text-blue-600 hover:underline font-semibold"
+                                    >
+                                        {index === 0 ? <FiHome className="inline-block mr-2"/> : ''}
+                                        {folder.fileName}
+                                    </button>
+                                    {index < folderPath.length - 1 && <FiChevronRight className="mx-1"/>}
+                                </div>
                             ))}
-                        </AnimatePresence>
-                    </motion.div>
-                     {filteredAndSortedFiles.length === 0 && (
-                        <div className="text-center py-10 text-gray-500">
-                            <FiFolder size={48} className="mx-auto mb-4"/>
-                            <p className="font-semibold">Folder ini kosong</p>
                         </div>
-                     )}
-                    </>
-                    }
+
+                        {selectedItems.length > 0 && (
+                            <div className="flex items-center gap-4 mb-4 p-3 bg-blue-50 rounded-lg">
+                                <p className="font-semibold text-blue-800">{selectedItems.length} item dipilih</p>
+                                <motion.button onClick={() => setIsMoveModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white font-semibold rounded-full shadow-md hover:bg-indigo-600 text-sm">
+                                    <FiMove />
+                                    <span>Pindahkan</span>
+                                </motion.button>
+                                 <motion.button onClick={handleDeleteConfirmation} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white font-semibold rounded-full shadow-md hover:bg-red-600 text-sm">
+                                    <FiTrash2 />
+                                    <span>Hapus</span>
+                                </motion.button>
+                            </div>
+                        )}
+
+                        <div className="flex items-center px-4 py-2 mb-2">
+                            <input
+                                type="checkbox"
+                                className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                onChange={handleSelectAll}
+                                checked={filteredAndSortedFiles.length > 0 && selectedItems.length === filteredAndSortedFiles.length}
+                            />
+                            <label className="ml-3 text-sm font-medium text-gray-700">Pilih Semua</label>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-grow overflow-y-auto pr-2">
+                        {isLoading ? <div className="flex justify-center p-10"><LoadingSpinner/></div> :
+                        <>
+                        <motion.div
+                            key={viewMode}
+                            className={`mt-4 ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}`}
+                        >
+                            <AnimatePresence>
+                                {filteredAndSortedFiles.map(file => (
+                                    viewMode === 'list'
+                                        ? <FileListItem
+                                            key={file._id}
+                                            file={file}
+                                            allFiles={allFiles}
+                                            onItemClick={(e) => handleItemClick(file, e)}
+                                            onToggleSelect={() => handleToggleSelect(file._id)}
+                                            isSelected={selectedItems.includes(file._id)}
+                                          />
+                                        : <FileGridItem
+                                            key={file._id}
+                                            file={file}
+                                            allFiles={allFiles}
+                                            onItemClick={(e) => handleItemClick(file, e)}
+                                            onToggleSelect={() => handleToggleSelect(file._id)}
+                                            isSelected={selectedItems.includes(file._id)}
+                                          />
+                                ))}
+                            </AnimatePresence>
+                        </motion.div>
+                         {filteredAndSortedFiles.length === 0 && (
+                            <div className="text-center py-10 text-gray-500">
+                                <FiFolder size={48} className="mx-auto mb-4"/>
+                                <p className="font-semibold">Folder ini kosong</p>
+                            </div>
+                         )}
+                        </>
+                        }
+                    </div>
                 </motion.div>
 
                 <FileDetailModal
@@ -461,7 +461,6 @@ const MyFilesPage = () => {
                     title={deleteConfirmation.title}
                     message={deleteConfirmation.message}
                 />
-                 {/* --- [BARU] Modal Konfirmasi Hapus Semua --- */}
                 <ConfirmationModal
                     isOpen={isDeleteAllModalOpen}
                     onClose={() => setIsDeleteAllModalOpen(false)}
@@ -483,12 +482,11 @@ const MyFilesPage = () => {
                     onClose={() => setCreateFolderModalOpen(false)}
                     onCreate={handleCreateFolder}
                 />
-                 {/* --- [BARU] Render Modal Unduh Semua --- */}
                 <DownloadAllModal
                     isOpen={isDownloadAllModalOpen}
                     onClose={() => setIsDownloadAllModalOpen(false)}
-                    allFiles={allFiles.filter(f => !f.isDirectory)} // Hanya kirim file, bukan folder
-                    onDownload={downloadAllFiles} // Kirim fungsi dari service
+                    allFiles={allFiles.filter(f => !f.isDirectory)}
+                    onDownload={downloadAllFiles}
                     user={user}
                     setNotification={setNotification}
                 />
@@ -497,7 +495,6 @@ const MyFilesPage = () => {
     );
 };
 
-// --- Komponen Item File ---
 const FileListItem = ({ file, onItemClick, onToggleSelect, isSelected, allFiles }) => (
     <motion.div
       layoutId={`file-card-${file._id}`}

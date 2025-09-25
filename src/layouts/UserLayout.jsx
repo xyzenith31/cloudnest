@@ -7,9 +7,13 @@ const UserLayout = () => {
   const location = useLocation();
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    // [DIPERBAIKI] Layout diubah menjadi flex-col setinggi layar (h-screen)
+    // dan overflow-hidden untuk mencegah scrollbar di body utama.
+    <div className="bg-gray-50 h-screen flex flex-col overflow-hidden">
       <Navbar />
-      <main className="p-4 md:p-8">
+      {/* [DIPERBAIKI] Area <main> sekarang menjadi fleksibel (flex-1) 
+          dan akan memiliki scrollbar sendiri (overflow-y-auto) jika kontennya panjang. */}
+      <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
