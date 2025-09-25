@@ -10,10 +10,12 @@ import SortDropdown from '../../components/SortDropdown';
 import FileDetailModal from '../../components/FileDetailModal';
 import NewFolderModal from '../../components/NewFolderModal';
 import MoveFilesModal from '../../components/MoveFilesModal';
+import DownloadAllModal from '../../components/DownloadAllModal'; // <-- [BARU] Import modal unduh semua
 import { useAuth } from '../../context/AuthContext';
-import { getUserFiles, deleteFile, createFolder, moveFiles, updateFile, downloadFile } from '../../services/fileService';
+import { getUserFiles, deleteFile, deleteAllFiles, createFolder, moveFiles, updateFile, downloadFile, downloadAllFiles } from '../../services/fileService'; // <-- [BARU] Import deleteAllFiles & downloadAllFiles
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Notification from '../../components/Notification';
+
 
 // --- Helper Functions ---
 const formatBytes = (bytes, decimals = 2) => {
@@ -152,6 +154,10 @@ const MyFilesPage = () => {
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, items: [] });
     
+    // --- [BARU] State untuk modal-modal baru ---
+    const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
+    const [isDownloadAllModalOpen, setIsDownloadAllModalOpen] = useState(false);
+    
     const [folderPath, setFolderPath] = useState([{ _id: null, fileName: 'Root' }]);
     const currentFolderId = folderPath[folderPath.length - 1]._id;
 
@@ -230,20 +236,42 @@ const MyFilesPage = () => {
             message: `Anda akan menghapus ${itemsToDelete.length} item secara permanen. Tindakan ini tidak dapat dibatalkan.`
         });
     };
+    
+    // --- [BARU] Fungsi untuk menghapus semua file ---
+    const executeDeleteAll = async () => {
+        try {
+            await deleteAllFiles();
+            setNotification({ message: 'Semua file berhasil dihapus', type: 'success' });
+            fetchFiles(); // Refresh file list
+        } catch (error) {
+            setNotification({ message: 'Gagal menghapus semua file', type: 'error' });
+        } finally {
+            setIsDeleteAllModalOpen(false); // Tutup modal
+        }
+    };
 
     const executeDelete = async () => {
         const itemsToDelete = deleteConfirmation.items;
+        
+        // [FIX] Simpan state saat ini jika terjadi error
+        const previousFiles = [...allFiles];
+        
+        // [FIX] Optimistic UI Update: Langsung hapus item dari state
+        setAllFiles(prevFiles => prevFiles.filter(f => !itemsToDelete.some(item => item._id === f._id)));
+        setDeleteConfirmation({ isOpen: false, items: [] });
+        setSelectedItems([]);
+
         try {
             for (const item of itemsToDelete) {
                 await deleteFile(item._id);
             }
             setNotification({ message: `${itemsToDelete.length} item berhasil dihapus`, type: 'success' });
-            fetchFiles();
+            // Fetch ulang untuk sinkronisasi data di background
+            fetchFiles(); 
         } catch (error) {
-            setNotification({ message: 'Gagal menghapus item', type: 'error' });
-        } finally {
-            setDeleteConfirmation({ isOpen: false, items: [] });
-            setSelectedItems([]);
+            setNotification({ message: 'Gagal menghapus item, mengembalikan data.', type: 'error' });
+            // Kembalikan state jika gagal
+            setAllFiles(previousFiles);
         }
     };
 
@@ -319,9 +347,18 @@ const MyFilesPage = () => {
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
+                        {/* --- [BARU] Tombol Aksi --- */}
                         <motion.button onClick={() => setCreateFolderModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-blue-500 text-white font-semibold rounded-full shadow-md hover:bg-blue-600">
                             <FiPlus />
                             <span>Folder Baru</span>
+                        </motion.button>
+                        <motion.button onClick={() => setIsDownloadAllModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-green-500 text-white font-semibold rounded-full shadow-md hover:bg-green-600">
+                            <FiDownload />
+                            <span>Unduh Semua</span>
+                        </motion.button>
+                        <motion.button onClick={() => setIsDeleteAllModalOpen(true)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex items-center gap-2 px-4 py-3 bg-red-500 text-white font-semibold rounded-full shadow-md hover:bg-red-600">
+                            <FiTrash2 />
+                            <span>Hapus Semua</span>
                         </motion.button>
                     </div>
 
@@ -375,7 +412,7 @@ const MyFilesPage = () => {
                                     ? <FileListItem
                                         key={file._id}
                                         file={file}
-                                        allFiles={allFiles} // <-- [PERBAIKAN]
+                                        allFiles={allFiles}
                                         onItemClick={(e) => handleItemClick(file, e)}
                                         onToggleSelect={() => handleToggleSelect(file._id)}
                                         isSelected={selectedItems.includes(file._id)}
@@ -383,7 +420,7 @@ const MyFilesPage = () => {
                                     : <FileGridItem
                                         key={file._id}
                                         file={file}
-                                        allFiles={allFiles} // <-- [PERBAIKAN]
+                                        allFiles={allFiles}
                                         onItemClick={(e) => handleItemClick(file, e)}
                                         onToggleSelect={() => handleToggleSelect(file._id)}
                                         isSelected={selectedItems.includes(file._id)}
@@ -424,6 +461,14 @@ const MyFilesPage = () => {
                     title={deleteConfirmation.title}
                     message={deleteConfirmation.message}
                 />
+                 {/* --- [BARU] Modal Konfirmasi Hapus Semua --- */}
+                <ConfirmationModal
+                    isOpen={isDeleteAllModalOpen}
+                    onClose={() => setIsDeleteAllModalOpen(false)}
+                    onConfirm={executeDeleteAll}
+                    title="Hapus Semua File?"
+                    message="Apakah Anda yakin ingin menghapus SEMUA file Anda secara permanen? Tindakan ini tidak dapat dibatalkan."
+                />
                 
                 <MoveFilesModal
                     isOpen={isMoveModalOpen}
@@ -437,6 +482,15 @@ const MyFilesPage = () => {
                     isOpen={isCreateFolderModalOpen}
                     onClose={() => setCreateFolderModalOpen(false)}
                     onCreate={handleCreateFolder}
+                />
+                 {/* --- [BARU] Render Modal Unduh Semua --- */}
+                <DownloadAllModal
+                    isOpen={isDownloadAllModalOpen}
+                    onClose={() => setIsDownloadAllModalOpen(false)}
+                    allFiles={allFiles.filter(f => !f.isDirectory)} // Hanya kirim file, bukan folder
+                    onDownload={downloadAllFiles} // Kirim fungsi dari service
+                    user={user}
+                    setNotification={setNotification}
                 />
             </main>
         </div>

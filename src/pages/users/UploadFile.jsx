@@ -4,20 +4,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     FiUploadCloud, FiFile, FiX, FiCheckCircle, FiLoader, FiAlertTriangle, FiTrash2, FiClock, FiHardDrive
 } from 'react-icons/fi';
-import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid } from 'react-icons/fa';
+import { 
+    FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid,
+    FaFilePowerpoint, FaFileExcel, FaWindows, FaApple 
+} from 'react-icons/fa';
 import { uploadFile, getUserFiles } from '../../services/fileService';
 import Notification from '../../components/Notification';
 
-// --- Helper Functions (Ikon & Format Ukuran) ---
-const getFileIcon = (fileType) => {
+// --- [PERBAIKAN UTAMA] Helper Functions (Ikon & Format Ukuran) ---
+const getFileIcon = (fileType, fileName = '') => {
+    const extension = fileName.slice(fileName.lastIndexOf('.')).toLowerCase();
     if (fileType.startsWith('image/')) return <FaFileImage className="text-purple-500" />;
     if (fileType.startsWith('video/')) return <FaFileVideo className="text-indigo-500" />;
-    if (fileType === 'application/pdf') return <FaFilePdf className="text-red-500" />;
+    if (fileType.includes('pdf')) return <FaFilePdf className="text-red-500" />;
     if (fileType.includes('word')) return <FaFileWord className="text-blue-500" />;
-    if (fileType.includes('zip') || fileType.includes('archive')) return <FaFileArchive className="text-yellow-500" />;
-    if (fileType.includes('android.package-archive')) return <FaAndroid className="text-green-500" />;
+    if (fileType.includes('excel')) return <FaFileExcel className="text-green-600" />;
+    if (fileType.includes('powerpoint')) return <FaFilePowerpoint className="text-orange-500" />;
+    if (['.zip', '.rar', '.7z', '.iso'].includes(extension)) return <FaFileArchive className="text-yellow-500" />;
+    if (extension === '.apk' || fileType.includes('android.package-archive')) return <FaAndroid className="text-green-500" />;
+    if (extension === '.exe' || extension === '.msi') return <FaWindows className="text-sky-500" />;
+    if (extension === '.dmg' || extension === '.ipa') return <FaApple className="text-gray-600" />;
     return <FiFile className="text-gray-500" />;
 };
+
 
 const formatBytes = (bytes, decimals = 2) => {
     if (!+bytes) return '0 Bytes';
@@ -28,102 +37,10 @@ const formatBytes = (bytes, decimals = 2) => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 };
 
-// --- [BARU] KOMPONEN MODAL BATAS PENYIMPANAN ---
-const StorageLimitModal = ({ isOpen, onClose, pendingSize, currentSize, limit }) => {
-    if (!isOpen) return null;
-
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4"
-        >
-            <motion.div
-                initial={{ scale: 0.9, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.9, y: 20 }}
-                className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 text-center"
-            >
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
-                    <FiAlertTriangle className="text-4xl text-red-500" />
-                </div>
-                <h2 className="text-xl font-bold my-4">Kapasitas Penyimpanan Tidak Cukup</h2>
-                <p className="text-gray-600">
-                    Anda mencoba mengunggah <strong className="text-red-600">{formatBytes(pendingSize)}</strong>, namun sisa penyimpanan Anda hanya <strong className="text-blue-600">{formatBytes(limit - currentSize)}</strong>.
-                </p>
-                <p className="text-gray-600 mt-2">
-                    Total penyimpanan akan menjadi <strong className="text-red-600">{formatBytes(currentSize + pendingSize)}</strong> dari <strong className="text-blue-600">{formatBytes(limit)}</strong>.
-                </p>
-                <div className="flex justify-center mt-6">
-                    <motion.button
-                        onClick={onClose}
-                        whileHover={{ scale: 1.05 }}
-                        className="px-8 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 font-semibold"
-                    >
-                        Mengerti
-                    </motion.button>
-                </div>
-            </motion.div>
-        </motion.div>
-    );
-};
-
-
-// --- Komponen Lainnya (StorageCard, FileSection, FileItem) ---
-const StorageCard = ({ usedStorage }) => {
-    const totalStorage = 10 * 1024 * 1024 * 1024; // 10 GB
-    const usagePercentage = (usedStorage / totalStorage) * 100;
-
-    return (
-        <motion.div
-            className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-        >
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2"><FiHardDrive />Penyimpanan</h2>
-            </div>
-            <div className="space-y-2">
-                <p className="text-center text-3xl font-bold text-gray-800">{formatBytes(usedStorage, 1)}<span className="text-lg text-gray-500">/10 GB</span></p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <motion.div
-                        className="bg-gradient-to-r from-sky-500 to-blue-500 h-2.5 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${usagePercentage}%` }}
-                        transition={{ duration: 1, ease: 'easeOut', delay: 0.5 }}
-                    />
-                </div>
-                <div className="text-center text-sm text-gray-500 pt-1">{usagePercentage.toFixed(1)}% terpakai</div>
-            </div>
-        </motion.div>
-    );
-};
-const FileSection = ({ title, files, onRemove, onClear, canClear, children }) => (
-    <motion.div
-        className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-    >
-        <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
-            {canClear && (
-                <motion.button whileHover={{scale: 1.1}} whileTap={{scale:0.9}} onClick={onClear} className="text-sm font-semibold text-red-500 hover:text-red-700 flex items-center gap-1">
-                    <FiTrash2 /> Bersihkan
-                </motion.button>
-            )}
-        </div>
-        <div className="space-y-3 max-h-96 overflow-y-auto pr-2 flex-grow">
-            <AnimatePresence>
-                {files.map(file => <FileItem key={file.id || file._id} file={file} onRemove={() => onRemove && onRemove(file.id)} />)}
-            </AnimatePresence>
-            {files.length === 0 && <p className="text-center text-gray-400 py-4">Tidak ada file.</p>}
-        </div>
-        {children}
-    </motion.div>
-);
+// ... (Komponen Lainnya seperti StorageLimitModal, StorageCard, dll. tetap sama) ...
+const StorageLimitModal=({isOpen,onClose,pendingSize,currentSize,limit})=>{if(!isOpen)return null;return(<motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4"><motion.div initial={{scale:0.9,y:20}} animate={{scale:1,y:0}} exit={{scale:0.9,y:20}} className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 text-center"><div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto"><FiAlertTriangle className="text-4xl text-red-500"/></div><h2 className="text-xl font-bold my-4">Kapasitas Penyimpanan Tidak Cukup</h2><p className="text-gray-600">Anda mencoba mengunggah <strong className="text-red-600">{formatBytes(pendingSize)}</strong>, namun sisa penyimpanan Anda hanya <strong className="text-blue-600">{formatBytes(limit-currentSize)}</strong>.</p><p className="text-gray-600 mt-2">Total penyimpanan akan menjadi <strong className="text-red-600">{formatBytes(currentSize+pendingSize)}</strong> dari <strong className="text-blue-600">{formatBytes(limit)}</strong>.</p><div className="flex justify-center mt-6"><motion.button onClick={onClose} whileHover={{scale:1.05}} className="px-8 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 font-semibold">Mengerti</motion.button></div></motion.div></motion.div>)};
+const StorageCard=({usedStorage})=>{const totalStorage=10*1024*1024*1024;const usagePercentage=(usedStorage/totalStorage)*100;return(<motion.div className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.3}}><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2"><FiHardDrive/>Penyimpanan</h2></div><div className="space-y-2"><p className="text-center text-3xl font-bold text-gray-800">{formatBytes(usedStorage,1)}<span className="text-lg text-gray-500">/10 GB</span></p><div className="w-full bg-gray-200 rounded-full h-2.5"><motion.div className="bg-gradient-to-r from-sky-500 to-blue-500 h-2.5 rounded-full" initial={{width:0}} animate={{width:`${usagePercentage}%`}} transition={{duration:1,ease:'easeOut',delay:0.5}}/></div><div className="text-center text-sm text-gray-500 pt-1">{usagePercentage.toFixed(1)}% terpakai</div></div></motion.div>)};
+const FileSection=({title,files,onRemove,onClear,canClear,children})=>(<motion.div className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.2}}><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-semibold text-gray-800">{title}</h2>{canClear&&(<motion.button whileHover={{scale:1.1}} whileTap={{scale:0.9}} onClick={onClear} className="text-sm font-semibold text-red-500 hover:text-red-700 flex items-center gap-1"><FiTrash2/> Bersihkan</motion.button>)}</div><div className="space-y-3 max-h-96 overflow-y-auto pr-2 flex-grow"><AnimatePresence>{files.map(file=><FileItem key={file.id||file._id} file={file} onRemove={()=>onRemove&&onRemove(file.id)}/>)}</AnimatePresence>{files.length===0&&<p className="text-center text-gray-400 py-4">Tidak ada file.</p>}</div>{children}</motion.div>);
 const FileItem = ({ file, onRemove }) => {
     const statusIcons = {
         uploading: <FiLoader className="text-blue-500 text-2xl animate-spin" />,
@@ -139,7 +56,7 @@ const FileItem = ({ file, onRemove }) => {
             exit={{ opacity: 0, x: -50, transition: { duration: 0.3 } }}
             className="bg-white p-3 rounded-lg shadow border flex items-center gap-4"
         >
-            <div className="text-3xl flex-shrink-0 w-8 text-center">{getFileIcon(file.type || file.fileType || '')}</div>
+            <div className="text-3xl flex-shrink-0 w-8 text-center">{getFileIcon(file.type || file.fileType || '', file.name || file.fileName || '')}</div>
             <div className="flex-grow min-w-0">
                 <p className="font-semibold text-gray-800 truncate">{file.name || file.fileName}</p>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -166,7 +83,6 @@ const FileItem = ({ file, onRemove }) => {
         </motion.div>
     );
 };
-
 
 const UploadFile = () => {
     const [pendingFiles, setPendingFiles] = useState([]);
@@ -200,7 +116,7 @@ const UploadFile = () => {
         setPendingFiles(prev => [...prev, ...newFiles]);
     }, []);
 
-    // [PERBAIKAN] Hapus `accept: { '*': [] }` untuk menerima semua file secara default dan aman
+    // --- [PERBAIKAN UTAMA] Menghapus properti 'accept' dari useDropzone ---
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
     const removeFile = (id, listSetter) => {
@@ -232,12 +148,10 @@ const UploadFile = () => {
                 });
     
                 setUploadingFiles(prev => prev.filter(f => f.id !== file.id));
-                // Tambahkan file yang berhasil diupload ke history
                 setHistory(h => [response.data, ...h.filter(item => item.id !== file.id)]);
                 setTotalSize(prevSize => prevSize + response.data.fileSize);
     
             } catch (err) {
-                 // [PERBAIKAN] Tambahkan penanganan untuk error spesifik
                 let errorMessage = 'Upload gagal. Terjadi kesalahan server.';
                 if (err.response) {
                     if (err.response.status === 409) {
@@ -285,7 +199,7 @@ const UploadFile = () => {
                     <p className="text-lg font-semibold text-gray-700">
                         {isDragActive ? 'Lepaskan file di sini!' : 'Seret & Lepas atau Klik untuk Memilih'}
                     </p>
-                    <p className="text-sm text-gray-500">Ukuran file maksimal 2GB</p>
+                    <p className="text-sm text-gray-500">Ukuran file maksimal 2GB. Semua jenis file didukung.</p>
                 </motion.div>
             </motion.div>
 

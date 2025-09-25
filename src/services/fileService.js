@@ -46,18 +46,29 @@ export const downloadFile = async (fileId, fileName) => {
 };
 
 
-export const downloadAllFiles = async (username) => {
-    const response = await axios.get(`${API_URL}/download-all`, {
-        ...getAuthHeaders(),
-        responseType: 'blob'
-    });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `${username}_all_files.zip`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+export const downloadAllFiles = async (downloadData) => {
+    const { fileIds, zipName, username } = downloadData;
+    try {
+        const response = await axios.post(`${API_URL}/download-all`, 
+            { fileIds, zipName }, // Kirim data sebagai body
+            {
+                ...getAuthHeaders(),
+                responseType: 'blob'
+            }
+        );
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        // Pastikan nama file diakhiri dengan .zip
+        const finalFileName = (zipName.endsWith('.zip') ? zipName : `${zipName}.zip`);
+        link.setAttribute('download', finalFileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    } catch (error) {
+        console.error("Gagal mengunduh semua file:", error.response?.data?.message || error.message);
+        throw new Error(error.response?.data?.message || 'Gagal memulai unduhan.');
+    }
 };
 
 // --- [FUNGSI BARU] ---
