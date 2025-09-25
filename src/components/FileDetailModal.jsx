@@ -1,150 +1,222 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiDownload, FiShare2, FiTrash2, FiStar, FiEdit, FiCheck, FiFileText, FiTag, FiCalendar, FiUser, FiSave, FiHardDrive, FiFolder } from 'react-icons/fi';
-import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid } from 'react-icons/fa';
+import {
+    FiDownload, FiShare2, FiTrash2, FiStar, FiEdit, FiFileText,
+    FiTag, FiCalendar, FiHardDrive, FiFolder, FiPaperclip, FiClock,
+    FiUser, FiHome, FiSend, FiCheckCircle
+} from 'react-icons/fi';
+import { FaFilePdf, FaFileImage, FaFileVideo, FaMusic } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
+import ShareModal from './ShareModal';
+import './css/FileDetailModal.css';
 
-// --- FUNGSI BANTU ---
+// ... (fungsi-fungsi helper seperti getFileIcon, formatBytes, ActionButton, dll. tetap sama) ...
 const getFileIcon = (type, props = {}) => {
-  const baseProps = { className: "text-4xl flex-shrink-0", ...props };
-  switch (type) {
-    case 'pdf': return <FaFilePdf {...baseProps} className={`${baseProps.className} text-red-500`} />;
-    case 'word': return <FaFileWord {...baseProps} className={`${baseProps.className} text-blue-500`} />;
-    case 'image': return <FaFileImage {...baseProps} className={`${baseProps.className} text-purple-500`} />;
-    case 'archive': return <FaFileArchive {...baseProps} className={`${baseProps.className} text-yellow-500`} />;
-    case 'video': return <FaFileVideo {...baseProps} className={`${baseProps.className} text-indigo-500`} />;
-    case 'apk': return <FaAndroid {...baseProps} className={`${baseProps.className} text-green-500`} />;
-    case 'folder': return <FiFolder {...baseProps} className={`${baseProps.className} text-yellow-500`} />;
-    default: return <FiFileText {...baseProps} className={`${baseProps.className} text-gray-500`} />;
-  }
+  const baseProps = { className: "text-9xl", ...props };
+  if (type.startsWith('image/')) return <FaFileImage {...baseProps} className={`${baseProps.className} text-purple-400`} />;
+  if (type.startsWith('video/')) return <FaFileVideo {...baseProps} className={`${baseProps.className} text-indigo-400`} />;
+  if (type.startsWith('audio/')) return <FaMusic {...baseProps} className={`${baseProps.className} text-pink-400`} />;
+  if (type.includes('pdf')) return <FaFilePdf {...baseProps} className={`${baseProps.className} text-red-400`} />;
+  return <FiFileText {...baseProps} className={`${baseProps.className} text-gray-400`} />;
 };
-
-const formatBytes = (bytes, decimals = 2) => {
-  if (!+bytes) return '0 Bytes';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+const formatBytes = (bytes) => {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
-
-const ActionButton = ({ icon: Icon, text, onClick, variant = 'default', isFullWidth = false }) => {
-    const variants = {
-        default: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-        delete: 'bg-red-50 text-red-600 hover:bg-red-100',
-        favorite: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100',
+const ActionButton = ({ icon: Icon, text, onClick, variant = 'default' }) => (
+    <motion.button whileTap={{ scale: 0.96 }} onClick={onClick} className={`action-button variant-${variant}`}>
+        <Icon className="w-5 h-5 flex-shrink-0"/>
+        <span className="truncate">{text}</span>
+    </motion.button>
+);
+const FilePreview = ({ file }) => {
+    const filePath = `http://localhost:3001/${file.filePath}`;
+    const fileType = file.fileType || '';
+    const renderPreview = () => {
+        if (fileType.startsWith('image/')) return <img src={filePath} alt={file.fileName} className="preview-content object-contain"/>;
+        if (fileType.startsWith('video/')) return <video src={filePath} controls className="preview-content bg-black" />;
+        if (fileType.startsWith('audio/')) {
+            return (
+                <div className="preview-content-placeholder audio-bg">
+                    <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ repeat: Infinity, repeatType: 'mirror', duration: 2 }}>
+                        <FaMusic className="text-9xl text-pink-300 drop-shadow-lg" />
+                    </motion.div>
+                    <audio src={filePath} controls className="w-full max-w-sm mt-8" />
+                </div>
+            );
+        }
+        if (fileType.includes('pdf')) return <iframe src={filePath} className="preview-content" title={file.fileName} />;
+        if (fileType.startsWith('text/')) return <iframe src={filePath} className="preview-content bg-white" title={file.fileName} />;
+        return (
+            <div className="preview-content-placeholder">
+                {getFileIcon(fileType)}
+                <p className="mt-4 text-slate-500 font-medium">Pratinjau tidak tersedia</p>
+            </div>
+        );
     };
     return (
-        <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onClick}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-colors ${variants[variant]} ${isFullWidth ? 'w-full' : 'flex-1'}`}
-        >
-            <Icon/> <span>{text}</span>
-        </motion.button>
+        <div className="preview-container">
+            <div className="preview-background-blur" style={fileType.startsWith('image/') ? { backgroundImage: `url(${filePath})` } : {}}/>
+            {renderPreview()}
+        </div>
     );
 };
-
+const Toast = ({ message, isVisible }) => (
+  <AnimatePresence>
+    {isVisible && (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className="toast-container"
+      >
+        <FiCheckCircle className="text-green-500" />
+        <p>{message}</p>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
 
 const FileDetailModal = ({ file, onClose, onUpdateFile, onDeleteFile, onDownloadFile }) => {
+  const { user: currentUser } = useAuth();
   const [isRenaming, setIsRenaming] = useState(false);
-  const [newName, setNewName] = useState(file ? file.name : '');
+  const [newName, setNewName] = useState('');
+  const [activeTab, setActiveTab] = useState('details');
+  const [comment, setComment] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false); // <-- [BARU] State untuk modal share
 
   useEffect(() => {
-    if(file) setNewName(file.name);
+    if (file) setNewName(file.fileName);
   }, [file]);
 
   if (!file) return null;
 
   const handleRenameSave = () => {
-    onUpdateFile({ ...file, name: newName });
+    if (newName.trim() === '' || newName === file.fileName) {
+        setIsRenaming(false);
+        return;
+    }
+    onUpdateFile({ ...file, fileName: newName });
     setIsRenaming(false);
   };
+  
+  const handleCopyLink = () => {
+      const shareableLink = `http://localhost:3001/api/files/${file._id}`; // Sesuaikan dengan endpoint download
+      navigator.clipboard.writeText(shareableLink).then(() => {
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 3000);
+      });
+  };
 
-  const toggleFavorite = () => {
-    onUpdateFile({ ...file, starred: !file.starred });
-  }
-
-  const handleDelete = () => {
-    onDeleteFile(file);
-  }
-
-  const handleDownload = () => {
-    onDownloadFile(file);
-  }
-
-  const FilePreview = () => {
-      if (file.type === 'image' && file.previewUrl) {
-          return <img src={file.previewUrl} alt="preview" className="w-full h-full object-cover"/>
-      }
-      return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
-            {getFileIcon(file.type, {className: "text-8xl text-gray-300"})}
-            <p className="mt-4 text-gray-500">Pratinjau tidak tersedia</p>
-        </div>
-      )
-  }
+  const tabs = [{ id: 'details', label: 'Detail' }, { id: 'activity', label: 'Aktivitas' }];
+  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } };
+  const itemVariants = { hidden: { y: 10, opacity: 0 }, visible: { y: 0, opacity: 1 } };
 
   return (
-    <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      >
-        <motion.div
-          layoutId={`file-card-${file.id}`}
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex overflow-hidden h-[600px]"
-          onClick={(e) => e.stopPropagation()}
-        >
-            <div className="w-2/3 bg-gray-200"><FilePreview /></div>
-            <div className="w-1/3 flex flex-col p-6">
-                <div className="flex items-start justify-between mb-4 gap-2">
-                    {isRenaming ? (
-                        <div className="flex-grow mr-2">
-                           <input
-                                type="text"
-                                value={newName}
-                                onChange={(e) => setNewName(e.target.value)}
-                                className="w-full text-xl font-bold text-gray-800 border-b-2 border-blue-500 focus:outline-none"
-                                autoFocus
-                           />
-                        </div>
-                    ) : (
-                        <h2 className="text-xl font-bold text-gray-800 break-all">{file.name}</h2>
-                    )}
-                    <button onClick={() => isRenaming ? handleRenameSave() : setIsRenaming(true)} className="p-2 rounded-full hover:bg-gray-100 text-gray-500 flex-shrink-0">
-                        {isRenaming ? <FiCheck onClick={handleRenameSave} className="text-green-500"/> : <FiEdit/>}
-                    </button>
-                </div>
-
-                <div className="space-y-3 text-sm text-gray-600 border-t pt-4 flex-grow overflow-y-auto">
-                    <h3 className="font-bold text-gray-800 text-base mb-2">Properti Lengkap</h3>
-                    <div className="flex items-center gap-3"><FiTag className="text-gray-400"/><p><strong>Nama File:</strong> <span className="break-all">{file.name}</span></p></div>
-                    <div className="flex items-center gap-3"><FiFileText className="text-gray-400"/><p><strong>Tipe:</strong> {file.category}</p></div>
-                    <div className="flex items-center gap-3"><FiHardDrive className="text-gray-400"/><p><strong>Ukuran:</strong> {formatBytes(file.size)}</p></div>
-                    <div className="flex items-center gap-3"><FiCalendar className="text-gray-400"/><p><strong>Dibuat:</strong> {new Date(file.createdAt).toLocaleString()}</p></div>
-                    <div className="flex items-center gap-3"><FiCalendar className="text-gray-400"/><p><strong>Modifikasi:</strong> {new Date(file.date).toLocaleString()}</p></div>
-                    <div className="flex items-center gap-3"><FiUser className="text-gray-400"/><p><strong>Pemilik:</strong> {file.owner}</p></div>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                    <ActionButton icon={FiStar} text={file.starred ? "Hapus Favorit" : "Jadikan Favorit"} variant="favorite" isFullWidth onClick={toggleFavorite}/>
-                    <div className="flex gap-2">
-                      <ActionButton icon={FiDownload} text="Unduh" onClick={handleDownload} />
-                      <ActionButton icon={FiShare2} text="Bagikan" />
+    <>
+      <AnimatePresence>
+          <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+            <motion.div
+              layout initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+              className="modal-content" onClick={(e) => e.stopPropagation()} >
+                <div className="w-3/5 relative"><FilePreview file={file} /></div>
+                <div className="w-2/5 flex flex-col relative">
+                    <Toast message="Tautan berhasil disalin!" isVisible={showToast} />
+                    <div className="p-5 border-b border-slate-200">
+                        {/* ... bagian rename ... */}
+                         <div className="flex items-start justify-between gap-2">
+                        <motion.div layout="position" className="w-full">
+                            <AnimatePresence mode="wait">
+                                {isRenaming ? (
+                                    <motion.input key="input" type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
+                                        className="w-full text-xl font-bold text-slate-800 bg-transparent border-b-2 border-blue-500 focus:outline-none"
+                                        autoFocus onBlur={handleRenameSave} onKeyDown={(e) => e.key === 'Enter' && handleRenameSave}/>
+                                ) : (
+                                    <motion.h2 key="text" className="text-xl font-bold text-slate-800 break-all">{file.fileName}</motion.h2>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
+                        <motion.button layout onClick={() => setIsRenaming(!isRenaming)} className="action-icon-button"><FiEdit/></motion.button>
                     </div>
-                    <ActionButton icon={FiTrash2} text="Hapus File" variant="delete" isFullWidth onClick={handleDelete} />
+                        <p className="text-sm text-slate-500 mt-1">{formatBytes(file.fileSize)}</p>
+                    </div>
+
+                    <div className="flex-grow overflow-y-auto">
+                        {/* ... bagian tabs dan kontennya ... */}
+                        <nav className="border-b px-5">
+                        <div className="flex space-x-4">
+                            {tabs.map(tab => (
+                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}>
+                                    {tab.label}
+                                    {activeTab === tab.id && <motion.div className="tab-underline" layoutId="tab-underline-detail" />}
+                                </button>
+                            ))}
+                        </div>
+                    </nav>
+                     <div className="p-5 relative min-h-[200px]">
+                         <AnimatePresence mode="wait">
+                            {activeTab === 'details' && (
+                                <motion.div key="details" variants={containerVariants} initial="hidden" animate="visible" exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                                    <div className="space-y-4">
+                                        <motion.h3 variants={itemVariants} className="font-bold text-slate-800">Properti</motion.h3>
+                                        <motion.div variants={itemVariants} className="detail-grid">
+                                            <div className="detail-item"><FiUser/><span>Pemilik</span><p>{file.user?.name || 'N/A'}</p></div>
+                                            <div className="detail-item"><FiHome/><span>Lokasi</span><p>{file.parent ? 'Dalam Folder' : 'Root'}</p></div>
+                                            <div className="detail-item"><FiTag/><span>Tipe File</span><p>{file.fileType}</p></div>
+                                            <div className="detail-item"><FiFolder/><span>Kategori</span><p>{file.category}</p></div>
+                                            <div className="detail-item"><FiCalendar/><span>Dibuat</span><p>{new Date(file.createdAt).toLocaleString('id-ID')}</p></div>
+                                            <div className="detail-item"><FiClock/><span>Diubah</span><p>{new Date(file.updatedAt).toLocaleString('id-ID')}</p></div>
+                                        </motion.div>
+                                    </div>
+                                </motion.div>
+                            )}
+                             {activeTab === 'activity' && (
+                                <motion.div key="activity" variants={containerVariants} initial="hidden" animate="visible" exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                                     <div className="space-y-4">
+                                        <motion.div variants={itemVariants}>
+                                            <h4 className="font-bold text-slate-800 mb-3">Tinggalkan Komentar</h4>
+                                            <div className="comment-form-container">
+                                                <img src={currentUser.avatar ? `http://localhost:3001/${currentUser.avatar}` : `https://ui-avatars.com/api/?name=${currentUser.name}&background=random`}
+                                                    alt="Avatar Anda" className="w-9 h-9 rounded-full object-cover"/>
+                                                <div className="relative w-full">
+                                                    <textarea placeholder="Tulis komentar Anda..." className="comment-input"
+                                                        rows="1" value={comment} onChange={(e) => setComment(e.target.value)}/>
+                                                    <AnimatePresence>
+                                                        {comment && (<motion.button className="send-button"
+                                                            initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}>
+                                                            <FiSend /></motion.button>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                    </div>
+
+                    <motion.div className="p-3 border-t border-slate-200 space-y-1 bg-white" variants={containerVariants} initial="hidden" animate="visible">
+                        <motion.div variants={itemVariants}><ActionButton icon={FiStar} text={file.starred ? "Favorit" : "Tandai sebagai Favorit"} variant={file.starred ? 'favorite-active' : 'favorite'} onClick={() => onUpdateFile({ _id: file._id, starred: !file.starred })}/></motion.div>
+                        <motion.div variants={itemVariants}><ActionButton icon={FiDownload} text="Unduh File" variant="download" onClick={() => onDownloadFile(file)}/></motion.div>
+                        {/* [BARU] Tombol Bagikan kini membuka ShareModal */}
+                        <motion.div variants={itemVariants}><ActionButton icon={FiShare2} text="Bagikan" variant="default" onClick={() => setIsShareModalOpen(true)} /></motion.div>
+                        <motion.div variants={itemVariants}><ActionButton icon={FiTrash2} text="Hapus File" variant="delete" onClick={() => onDeleteFile(file)}/></motion.div>
+                    </motion.div>
                 </div>
-                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 bg-white/50 rounded-full p-1">
-                    <FiX size={20}/>
-                </button>
-            </div>
-        </motion.div>
+            </motion.div>
       </motion.div>
-    </AnimatePresence>
+      </AnimatePresence>
+      
+      {/* [BARU] Render ShareModal jika isShareModalOpen true */}
+      {isShareModalOpen && <ShareModal file={file} onClose={() => setIsShareModalOpen(false)} />}
+    </>
   );
 };
 

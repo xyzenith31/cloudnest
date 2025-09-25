@@ -1,0 +1,33 @@
+.share-modal-content {
+    @apply bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden;
+}
+
+.share-modal-header {
+    @apply flex items-center justify-between p-5 border-b border-slate-200;
+}
+
+.link-container {
+    @apply relative flex-grow;
+}
+
+.link-container svg {
+    @apply absolute left-3 top-1/2 -translate-y-1/2;
+}
+
+.link-input {
+    @apply w-full bg-slate-100 rounded-lg pl-9 pr-3 py-2.5 text-slate-700 text-sm border-2 border-transparent focus:bg-white focus:border-blue-500 focus:ring-0 outline-none transition;
+}
+
+.copy-button {
+    @apply flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200;
+    @apply bg-slate-200 text-slate-700 hover:bg-slate-300;
+}
+
+.copy-button.copied {
+    @apply bg-green-500 text-white;
+}
+
+.send-invite-button {
+     @apply flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200;
+    @apply bg-blue-500 text-white hover:bg-blue-600 shadow-sm;
+}

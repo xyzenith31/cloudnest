@@ -1,0 +1,106 @@
+/* --- LAYOUT UTAMA --- */
+.modal-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50;
+}
+.modal-content {
+    @apply bg-slate-50 rounded-2xl shadow-2xl w-full max-w-5xl flex overflow-hidden h-[90vh] max-h-[700px];
+}
+
+/* --- PANEL PREVIEW (KIRI) --- */
+.preview-container {
+    @apply w-full h-full relative overflow-hidden bg-slate-200;
+}
+.preview-background-blur {
+    @apply absolute inset-0 bg-cover bg-center filter blur-xl scale-110 opacity-70;
+}
+.preview-content {
+    @apply w-full h-full absolute inset-0;
+}
+.preview-content-placeholder {
+    @apply w-full h-full flex flex-col items-center justify-center relative;
+}
+.audio-bg {
+    @apply bg-gradient-to-br from-gray-800 to-gray-900;
+}
+
+/* --- PANEL DETAIL (KANAN) --- */
+.action-icon-button {
+    @apply p-2 rounded-full text-slate-500 transition-colors duration-200;
+}
+.action-icon-button:hover {
+    @apply bg-slate-200 text-slate-800;
+}
+
+/* --- TABS --- */
+.tab-button {
+    @apply relative py-3 font-semibold text-sm transition-colors;
+}
+.tab-button.active {
+    @apply text-blue-600;
+}
+.tab-button:not(.active) {
+    @apply text-slate-500 hover:text-slate-800;
+}
+.tab-underline {
+    @apply absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600;
+}
+
+/* --- GRID DETAIL --- */
+.detail-grid {
+    @apply grid grid-cols-1 gap-4 text-sm;
+}
+.detail-item {
+    @apply flex items-start gap-3 text-slate-600;
+}
+.detail-item svg {
+    @apply flex-shrink-0 text-slate-400 mt-0.5;
+}
+.detail-item span {
+    @apply font-medium w-24 flex-shrink-0;
+}
+.detail-item p {
+    @apply font-semibold text-slate-800 break-words text-right flex-1;
+}
+
+/* --- [BARU] FORM KOMENTAR --- */
+.comment-form-container {
+    @apply flex items-start gap-3;
+}
+.comment-input {
+    @apply w-full p-2.5 pr-12 bg-slate-100 border-2 border-transparent rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200 resize-none;
+    line-height: 1.5;
+}
+.send-button {
+    @apply absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center transition-all duration-200 hover:bg-blue-600 shadow-lg hover:shadow-blue-300;
+}
+
+
+/* --- TOMBOL AKSI --- */
+.action-button {
+    @apply w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 text-sm;
+}
+.action-button:hover {
+    @apply shadow-md transform -translate-y-px;
+}
+.action-button.variant-default {
+    @apply text-slate-600 hover:bg-slate-100;
+}
+.action-button.variant-favorite {
+    @apply text-yellow-500 hover:bg-yellow-50;
+}
+.action-button.variant-favorite-active {
+    @apply bg-yellow-100 text-yellow-600;
+}
+/* [BARU] Variant untuk tombol unduh */
+.action-button.variant-download {
+    @apply text-green-600 hover:bg-green-50;
+}
+.action-button.variant-delete {
+    @apply text-red-600 hover:bg-red-50;
+}
+
+/* --- SCROLLBAR KUSTOM --- */
+.flex-grow.overflow-y-auto::-webkit-scrollbar { width: 6px; }
+.flex-grow.overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
+.flex-grow.overflow-y-auto::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
+.flex-grow.overflow-y-auto::-webkit-scrollbar-thumb:hover { @apply bg-slate-400; }
