@@ -4,7 +4,11 @@ import {
     FiImage, FiVideo, FiFileText, FiArchive, FiGrid, FiList, FiStar, FiCpu,
     FiAperture, FiSearch, FiHardDrive, FiDownload, FiTrash2, FiAlertTriangle, FiMusic, FiFolder, FiPlus, FiMove, FiChevronRight, FiHome
 } from 'react-icons/fi';
-import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid } from 'react-icons/fa';
+// [PERUBAHAN] Menambahkan ikon baru untuk berbagai jenis file
+import {
+    FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid,
+    FaFileExcel, FaFilePowerpoint, FaWindows, FaApple, FaLinux
+} from 'react-icons/fa';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import SortDropdown from '../../components/SortDropdown';
 import FileDetailModal from '../../components/FileDetailModal';
@@ -19,27 +23,71 @@ import Notification from '../../components/Notification';
 
 // --- Helper Functions ---
 const formatBytes = (bytes, decimals = 2) => {
-  if (!+bytes) return '0 Bytes';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 };
 
-const getFileIcon = (type, props = {}) => {
-  const baseProps = { className: "text-4xl flex-shrink-0", ...props };
+// [PERUBAHAN] Fungsi getFileIcon yang diperbarui untuk mencakup semua jenis file
+const getFileIcon = (file, props = {}) => {
+    const baseProps = { className: "text-4xl flex-shrink-0", ...props };
+    const extension = file.fileName ? `.${file.fileName.split('.').pop().toLowerCase()}` : '';
 
-  if (type === 'folder') return <FiFolder {...baseProps} className={`${baseProps.className} text-yellow-500`} />;
-  if (type.startsWith('image/')) return <FaFileImage {...baseProps} className={`${baseProps.className} text-purple-500`} />;
-  if (type.startsWith('audio/')) return <FiMusic {...baseProps} className={`${baseProps.className} text-pink-500`} />;
-  if (type.startsWith('video/')) return <FaFileVideo {...baseProps} className={`${baseProps.className} text-indigo-500`} />;
-  if (type.includes('pdf')) return <FaFilePdf {...baseProps} className={`${baseProps.className} text-red-500`} />;
-  if (type.includes('word')) return <FaFileWord {...baseProps} className={`${baseProps.className} text-blue-500`} />;
-  if (type.includes('zip') || type.includes('rar')) return <FaFileArchive {...baseProps} className={`${baseProps.className} text-yellow-500`} />;
-  if (type.includes('android')) return <FaAndroid {...baseProps} className={`${baseProps.className} text-green-500`} />;
+    if (file.isDirectory) {
+        return <FiFolder {...baseProps} className={`${baseProps.className} text-yellow-500`} />;
+    }
 
-  return <FiFileText {...baseProps} className={`${baseProps.className} text-gray-500`} />;
+    switch (file.category) {
+        case 'foto':
+            return <FaFileImage {...baseProps} className={`${baseProps.className} text-purple-500`} />;
+        case 'music':
+            return <FiMusic {...baseProps} className={`${baseProps.className} text-pink-500`} />;
+        case 'video':
+            return <FaFileVideo {...baseProps} className={`${baseProps.className} text-indigo-500`} />;
+        case 'arsip':
+            return <FaFileArchive {...baseProps} className={`${baseProps.className} text-yellow-600`} />;
+        case 'apk':
+            return <FaAndroid {...baseProps} className={`${baseProps.className} text-green-500`} />;
+        case 'dokumen':
+            switch (extension) {
+                case '.pdf':
+                    return <FaFilePdf {...baseProps} className={`${baseProps.className} text-red-500`} />;
+                case '.doc':
+                case '.docx':
+                    return <FaFileWord {...baseProps} className={`${baseProps.className} text-blue-600`} />;
+                case '.xls':
+                case '.xlsx':
+                    return <FaFileExcel {...baseProps} className={`${baseProps.className} text-green-600`} />;
+                case '.ppt':
+                case '.pptx':
+                    return <FaFilePowerpoint {...baseProps} className={`${baseProps.className} text-orange-500`} />;
+                default:
+                    return <FiFileText {...baseProps} className={`${baseProps.className} text-gray-500`} />;
+            }
+        case 'aplikasi': // Kategori untuk installer
+            switch (extension) {
+                case '.exe':
+                case '.msi':
+                    return <FaWindows {...baseProps} className={`${baseProps.className} text-blue-500`} />;
+                case '.dmg':
+                    return <FaApple {...baseProps} className={`${baseProps.className} text-gray-600`} />;
+                case '.deb':
+                    return <FaLinux {...baseProps} className={`${baseProps.className} text-orange-400`} />;
+                case '.ipa':
+                     return <FaApple {...baseProps} className={`${baseProps.className} text-blue-400`} />; // Menggunakan ikon Apple untuk IPA
+                default:
+                    return <FiCpu {...baseProps} className={`${baseProps.className} text-gray-700`} />;
+            }
+        default:
+            // Fallback untuk tipe yang tidak dikenali berdasarkan MIME type
+            if (file.fileType.startsWith('image/')) return <FaFileImage {...baseProps} className={`${baseProps.className} text-purple-500`} />;
+            if (file.fileType.startsWith('audio/')) return <FiMusic {...baseProps} className={`${baseProps.className} text-pink-500`} />;
+            if (file.fileType.startsWith('video/')) return <FaFileVideo {...baseProps} className={`${baseProps.className} text-indigo-500`} />;
+            return <FiFileText {...baseProps} className={`${baseProps.className} text-gray-500`} />;
+    }
 };
 
 
@@ -73,18 +121,18 @@ const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage }) => {
             <div className="bg-white rounded-2xl shadow-lg p-4 text-center">
                 <h3 className="font-bold text-gray-800">Penyimpanan</h3>
                 <div className="w-40 h-40 mx-auto relative flex items-center justify-center">
-                     <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie data={[{value: usagePercentage}, {value: 100 - usagePercentage}]} dataKey="value" innerRadius="80%" outerRadius="100%" startAngle={90} endAngle={450} cornerRadius={50}>
-                                <Cell fill="#3b82f6"/>
-                                <Cell fill="#e5e7eb"/>
-                            </Pie>
-                        </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <p className="text-3xl font-bold text-blue-600">{Math.round(usagePercentage)}%</p>
-                        <p className="text-sm text-gray-500">Terpakai</p>
-                    </div>
+                       <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie data={[{value: usagePercentage}, {value: 100 - usagePercentage}]} dataKey="value" innerRadius="80%" outerRadius="100%" startAngle={90} endAngle={450} cornerRadius={50}>
+                                    <Cell fill="#3b82f6"/>
+                                    <Cell fill="#e5e7eb"/>
+                                </Pie>
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <p className="text-3xl font-bold text-blue-600">{Math.round(usagePercentage)}%</p>
+                            <p className="text-sm text-gray-500">Terpakai</p>
+                        </div>
                 </div>
             </div>
         </aside>
@@ -424,7 +472,6 @@ const MyFilesPage = () => {
                         </div>
                     </div>
                     
-                    {/* [PERBAIKAN] Area scroll dengan placeholder yang terpusat */}
                     <div className="flex-grow min-w-0 overflow-y-auto pr-4">
                         {isLoading ? (
                             <div className="flex justify-center items-center h-full">
@@ -543,7 +590,8 @@ const FileListItem = ({ file, onItemClick, onToggleSelect, isSelected, allFiles 
         className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 flex-shrink-0"
       />
       <div className="flex-grow min-w-0 flex items-center gap-4 cursor-pointer">
-        {getFileIcon(file.isDirectory ? 'folder' : file.fileType, {className: "text-3xl"})}
+        {/* [PERUBAHAN] Menggunakan file object di getFileIcon */}
+        {getFileIcon(file, {className: "text-3xl"})}
         <div className="flex-grow min-w-0">
           <p className="font-semibold text-gray-800 truncate flex items-center gap-2">
             {file.fileName}
@@ -574,7 +622,8 @@ const FileGridItem = ({ file, onItemClick, onToggleSelect, isSelected, allFiles 
       />
        {file.starred && <FiStar className="text-yellow-400 absolute top-3 left-3 z-10" />}
       <div className="relative w-full h-20 flex items-center justify-center">
-        {getFileIcon(file.isDirectory ? 'folder' : file.fileType, { className: 'text-6xl mx-auto' })}
+        {/* [PERUBAHAN] Menggunakan file object di getFileIcon */}
+        {getFileIcon(file, { className: 'text-6xl mx-auto' })}
       </div>
       <p className="mt-4 font-semibold text-gray-800 break-all w-full truncate">{file.fileName}</p>
       <p className="text-sm text-gray-500 mt-1">{!file.isDirectory ? formatBytes(file.fileSize) : `${allFiles.filter(f => f.parent === file._id).length} item`}</p>
