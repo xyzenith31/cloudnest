@@ -1,15 +1,15 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    FiSearch, FiStar, FiClock, FiFile,
-    FiHardDrive, FiGrid, FiList, FiFolder, FiUploadCloud, FiBell, FiEdit, FiShare2, FiTrash2
+    FiStar, FiClock, FiFile, FiHardDrive, FiFolder, FiUploadCloud, FiMusic
 } from 'react-icons/fi';
-import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive } from 'react-icons/fa';
+import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo } from 'react-icons/fa';
 import FileDetailModal from '../../components/FileDetailModal';
-import { getUserFiles } from '../../services/fileService';
+import { getUserFiles, updateFile, deleteFile, downloadFile } from '../../services/fileService';
 import { useAuth } from '../../context/AuthContext';
 import { useUpload } from '../../context/UploadContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import Notification from '../../components/Notification';
 
 // --- FUNGSI BANTU ---
 const formatBytes = (bytes, decimals = 2) => {
@@ -21,9 +21,12 @@ const formatBytes = (bytes, decimals = 2) => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 };
 
+// [PERBAIKAN] Fungsi ikon dibuat lebih lengkap untuk mengenali berbagai jenis file
 const getFileIcon = (type) => {
   if (!type) return <FiFile className="text-gray-500" />;
   if (type.startsWith('image/')) return <FaFileImage className="text-purple-500" />;
+  if (type.startsWith('video/')) return <FaFileVideo className="text-indigo-500" />;
+  if (type.startsWith('audio/')) return <FiMusic className="text-pink-500" />;
   if (type === 'application/pdf') return <FaFilePdf className="text-red-500" />;
   if (type.includes('word')) return <FaFileWord className="text-blue-500" />;
   if (type.includes('zip') || type.includes('archive')) return <FaFileArchive className="text-yellow-500" />;
@@ -34,10 +37,7 @@ const getFileIcon = (type) => {
 // --- KOMPONEN UTAMA ---
 const UserBeranda = () => {
   const { user } = useAuth();
-  // [PERBAIKAN] Ambil setPopupOpen dan setPopupMinimized dari konteks
   const { setPopupOpen, setPopupMinimized } = useUpload();
-  const [viewMode, setViewMode] = useState('list');
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [allFiles, setAllFiles] = useState([]);
   const [stats, setStats] = useState({
@@ -47,47 +47,94 @@ const UserBeranda = () => {
       totalFolders: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [notification, setNotification] = useState({ message: '', type: '' });
 
-  useEffect(() => {
-    const fetchData = async () => {
-        setIsLoading(true);
-        try {
-            const response = await getUserFiles();
-            const filesData = response.data.files;
-            setAllFiles(filesData);
-            setStats({
-                totalFiles: filesData.filter(f => !f.isDirectory).length,
-                totalSize: response.data.totalSize,
-                starredFiles: filesData.filter(f => f.starred).length,
-                totalFolders: filesData.filter(f => f.isDirectory).length,
-            });
-        } catch (error) {
-            console.error("Gagal mengambil data beranda:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    fetchData();
+  const fetchData = useCallback(async () => {
+    try {
+        const response = await getUserFiles();
+        const filesData = response.data.files;
+        setAllFiles(filesData);
+        setStats({
+            totalFiles: filesData.filter(f => !f.isDirectory).length,
+            totalSize: response.data.totalSize,
+            starredFiles: filesData.filter(f => f.starred).length,
+            totalFolders: filesData.filter(f => f.isDirectory).length,
+        });
+    } catch (error) {
+        console.error("Gagal mengambil data beranda:", error);
+        setNotification({ message: 'Gagal memuat data terbaru', type: 'error' });
+    } finally {
+        setIsLoading(false);
+    }
   }, []);
 
-  const filteredFiles = useMemo(() =>
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const recentFiles = useMemo(() =>
     allFiles
-      .filter(file => !file.isDirectory && file.fileName.toLowerCase().includes(searchTerm.toLowerCase()))
+      .filter(file => !file.isDirectory)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 5),
-    [searchTerm, allFiles]
+    [allFiles]
   );
   
-  const quickAccessFolders = useMemo(() => 
+  const recentFolders = useMemo(() => 
     allFiles.filter(file => file.isDirectory), 
     [allFiles]
   );
   
-  // [PERBAIKAN] Fungsi ini sekarang hanya membuka popup
   const handleQuickUploadClick = () => {
       setPopupOpen(true);
       setPopupMinimized(false);
   };
+
+  const handleUpdateFile = async (updateData) => {
+    const fileToUpdate = selectedFile;
+    if (!fileToUpdate) return;
+    setAllFiles(prevFiles => 
+        prevFiles.map(f => f._id === fileToUpdate._id ? { ...f, ...updateData } : f)
+    );
+    setSelectedFile(prev => ({ ...prev, ...updateData }));
+    try {
+        await updateFile(fileToUpdate._id, updateData);
+        setNotification({ message: 'File berhasil diperbarui', type: 'success' });
+        await fetchData();
+    } catch (error) {
+        setNotification({ message: 'Gagal memperbarui file', type: 'error' });
+        setAllFiles(prevFiles => 
+            prevFiles.map(f => f._id === fileToUpdate._id ? fileToUpdate : f)
+        );
+        setSelectedFile(fileToUpdate);
+    }
+  };
+
+  const handleDeleteFile = async (fileToDelete) => {
+    if (!fileToDelete) return;
+    if (window.confirm(`Anda yakin ingin menghapus "${fileToDelete.fileName}"?`)) {
+        setAllFiles(prevFiles => prevFiles.filter(f => f._id !== fileToDelete._id));
+        setSelectedFile(null);
+        try {
+            await deleteFile(fileToDelete._id);
+            setNotification({ message: 'File berhasil dihapus', type: 'success' });
+            await fetchData();
+        } catch (error) {
+            setNotification({ message: 'Gagal menghapus file', type: 'error' });
+            await fetchData();
+        }
+    }
+  };
+
+  const handleDownloadFile = async (fileToDownload) => {
+    try {
+        setNotification({ message: `Mengunduh ${fileToDownload.fileName}...`, type: 'info' });
+        await downloadFile(fileToDownload._id, fileToDownload.fileName);
+    } catch (error) {
+        setNotification({ message: 'Gagal mengunduh file', type: 'error' });
+    }
+  };
+
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -101,6 +148,7 @@ const UserBeranda = () => {
 
   return (
     <>
+      <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
       <div className="p-4 md:p-6 lg:p-8 space-y-8 overflow-hidden">
         <motion.div
           initial={{ opacity: 0, y: -40 }}
@@ -143,50 +191,57 @@ const UserBeranda = () => {
                 variants={itemVariants} 
                 initial="hidden" 
                 animate="visible"
-                className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50"
+                className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col h-[450px]"
               >
-                  <div className="flex flex-col md:flex-row justify-between items-center mb-5 gap-4">
-                      <h2 className="text-2xl font-semibold text-gray-700">File Terbaru</h2>
+                  <h2 className="text-2xl font-semibold text-gray-700 mb-5 flex-shrink-0">File Terbaru</h2>
+                  <div className="flex-grow overflow-y-auto pr-2">
+                    <div className="space-y-3">
+                      <AnimatePresence>
+                        {recentFiles.map((file) => (
+                           <FileListItem key={file._id} file={file} onSelect={() => setSelectedFile(file)} /> 
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                    {recentFiles.length === 0 && !isLoading && (
+                        <div className="flex flex-col justify-center items-center h-full text-gray-400">
+                            <FiFile size={40}/>
+                            <p className="mt-2">Tidak ada file terbaru.</p>
+                        </div>
+                    )}
                   </div>
-
-                  <motion.div
-                    key={viewMode}
-                    className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6' : 'space-y-3'}
-                  >
-                    <AnimatePresence>
-                      {filteredFiles.map((file) => (
-                        viewMode === 'list' 
-                          ? <FileListItem key={file._id} file={file} onSelect={() => setSelectedFile(file)} /> 
-                          : <FileGridItem key={file._id} file={file} onSelect={() => setSelectedFile(file)} />
-                      ))}
-                    </AnimatePresence>
-                     {filteredFiles.length === 0 && !isLoading && (
-                        <p className="text-center text-gray-400 py-4 col-span-full">Tidak ada file terbaru.</p>
-                     )}
-                  </motion.div>
               </motion.div>
           </div>
 
-          <div className="lg:col-span-1 space-y-8">
-              <motion.div variants={itemVariants} initial="hidden" animate="visible">
-                  <h2 className="text-2xl font-semibold text-gray-700 mb-4">Akses Cepat</h2>
-                  <div className="grid grid-cols-2 gap-4">
-                      {quickAccessFolders.map(folder => (
-                          <motion.div
-                              key={folder._id}
-                              whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300 } }}
-                              className="bg-white/70 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-gray-200/80 cursor-pointer"
-                          >
-                              <div className="flex justify-between items-start">
-                                  <FiFolder className="text-3xl text-yellow-500"/>
-                                  <span className="font-bold text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{allFiles.filter(f => f.parent === folder._id).length}</span>
-                              </div>
-                              <p className="mt-3 font-semibold text-gray-800 truncate">{folder.fileName}</p>
-                          </motion.div>
-                      ))}
-                      {quickAccessFolders.length === 0 && !isLoading && (
-                          <p className="text-center text-gray-400 py-4 col-span-full">Belum ada folder.</p>
-                      )}
+          <div className="lg:col-span-1">
+              <motion.div 
+                variants={itemVariants} 
+                initial="hidden" 
+                animate="visible"
+                className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col h-[450px]"
+              >
+                  <h2 className="text-2xl font-semibold text-gray-700 mb-4 flex-shrink-0">Folder Baru</h2>
+                  <div className="flex-grow overflow-y-auto pr-2">
+                    <div className="grid grid-cols-2 gap-4">
+                        {recentFolders.map(folder => (
+                            <motion.div
+                                key={folder._id}
+                                whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300 } }}
+                                className="bg-white/70 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-gray-200/80 cursor-pointer"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <FiFolder className="text-3xl text-yellow-500"/>
+                                    <span className="font-bold text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{allFiles.filter(f => f.parent === folder._id).length}</span>
+                                </div>
+                                <p className="mt-3 font-semibold text-gray-800 truncate">{folder.fileName}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                    {recentFolders.length === 0 && !isLoading && (
+                        <div className="flex flex-col justify-center items-center h-full text-gray-400">
+                           <FiFolder size={40}/>
+                           <p className="mt-2">Belum ada folder.</p>
+                        </div>
+                    )}
                   </div>
               </motion.div>
           </div>
@@ -195,13 +250,16 @@ const UserBeranda = () => {
       
       <FileDetailModal 
         file={selectedFile} 
-        onClose={() => setSelectedFile(null)} 
+        allFiles={allFiles}
+        onClose={() => setSelectedFile(null)}
+        onUpdateFile={handleUpdateFile}
+        onDeleteFile={handleDeleteFile}
+        onDownloadFile={handleDownloadFile}
       />
     </>
   );
 };
 
-// ... Sisa komponen (StatCard, StorageStatCard, FileListItem, FileGridItem) tetap sama ...
 const StatCard = ({ icon: Icon, label, value, color }) => {
     const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { type: 'spring' } }};
     const colors = {
@@ -271,25 +329,6 @@ const FileListItem = ({ file, onSelect }) => (
           <FiClock />
           <span>{new Date(file.createdAt).toLocaleDateString()}</span>
       </div>
-    </motion.div>
-);
-
-const FileGridItem = ({ file, onSelect }) => (
-    <motion.div
-        layoutId={`file-card-${file._id}`}
-        initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.15 } }}
-        whileHover={{ y: -10, boxShadow: '0px 15px 30px -10px rgba(0, 0, 0, 0.15)', transition: { type: 'spring', stiffness: 300 } }}
-        className="bg-white/80 backdrop-blur-sm p-5 rounded-2xl shadow-lg border flex flex-col items-center text-center cursor-pointer"
-        onClick={onSelect}
-    >
-        <div className="text-5xl mb-4">{getFileIcon(file.fileType)}</div>
-        <p className="font-semibold text-gray-800 break-all w-full truncate">{file.fileName}</p>
-        <p className="text-sm text-gray-500 mt-1">{formatBytes(file.fileSize)}</p>
-        <div className="flex items-center gap-2 text-xs text-gray-400 mt-3">
-            <FiClock size={12} />
-            <span>{new Date(file.createdAt).toLocaleDateString()}</span>
-        </div>
     </motion.div>
 );
 
