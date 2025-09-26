@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     FiDownload, FiShare2, FiTrash2, FiStar, FiEdit, FiFileText,
@@ -10,7 +10,29 @@ import { useAuth } from '../context/AuthContext';
 import ShareModal from './ShareModal';
 import './css/FileDetailModal.css';
 
-// --- Helper Functions (Tidak ada perubahan) ---
+// [FUNGSI BARU] Untuk membuat path lokasi file
+const generateFilePath = (file, allFiles) => {
+    if (!file || !allFiles) return 'N/A';
+    if (!file.parent) {
+        return 'Home';
+    }
+    let path = [];
+    let currentParentId = file.parent;
+    // Batasi loop untuk mencegah infinite loop jika ada data yang salah
+    for (let i = 0; i < 20; i++) { 
+        const parentFolder = allFiles.find(f => f._id === currentParentId);
+        if (parentFolder) {
+            path.unshift(parentFolder.fileName);
+            currentParentId = parentFolder.parent;
+            if (!currentParentId) break;
+        } else {
+            break;
+        }
+    }
+    return `Home/${path.join('/')}`;
+};
+
+// --- Helper Functions ---
 const getFileIcon = (type, props = {}) => {
   const baseProps = { className: "text-9xl", ...props };
   if (type.startsWith('image/')) return <FaFileImage {...baseProps} className={`${baseProps.className} text-purple-400`} />;
@@ -41,7 +63,7 @@ const FilePreview = ({ file }) => {
         if (fileType.startsWith('audio/')) return <div className="preview-content-placeholder audio-bg"> <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ repeat: Infinity, repeatType: 'mirror', duration: 2 }}> <FaMusic className="text-9xl text-pink-300 drop-shadow-lg" /> </motion.div> <audio src={filePath} controls className="w-full max-w-sm mt-8" /> </div>;
         if (fileType.includes('pdf')) return <iframe src={filePath} className="preview-content" title={file.fileName} />;
         if (fileType.startsWith('text/')) return <iframe src={filePath} className="preview-content bg-white" title={file.fileName} />;
-        return <div className="preview-content-placeholder"> {getFileIcon(fileType)} <p className="mt-4 text-slate-500 font-medium">Pratinjau tidak tersedia</p> </div>;
+        return <div className="preview-content-placeholder"> <div className="placeholder-icon-container"> {getFileIcon(fileType)} </div> <p className="placeholder-text">Pratinjau tidak tersedia</p> </div>;
     };
     return (
         <div className="preview-container">
@@ -51,13 +73,16 @@ const FilePreview = ({ file }) => {
     );
 };
 
-const FileDetailModal = ({ file, onClose, onUpdateFile, onDeleteFile, onDownloadFile }) => {
+const FileDetailModal = ({ file, allFiles, onClose, onUpdateFile, onDeleteFile, onDownloadFile }) => {
   const { user: currentUser } = useAuth();
   const [isRenaming, setIsRenaming] = useState(false);
   const [newName, setNewName] = useState('');
   const [activeTab, setActiveTab] = useState('details');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  
+  // [PERBAIKAN] Menggunakan useMemo untuk menghitung path lokasi
+  const locationPath = useMemo(() => generateFilePath(file, allFiles), [file, allFiles]);
 
   useEffect(() => {
     if (file) setNewName(file.fileName);
@@ -106,7 +131,6 @@ const FileDetailModal = ({ file, onClose, onUpdateFile, onDeleteFile, onDownload
                                     {isMinimized ? <FiChevronDown /> : <FiChevronUp />}
                                 </motion.button>
                                 
-                                {/* [PERBAIKAN] Tombol Edit/Simpan yang dinamis */}
                                 <AnimatePresence mode="wait">
                                     <motion.button
                                         key={isRenaming ? 'save' : 'edit'}
@@ -153,8 +177,9 @@ const FileDetailModal = ({ file, onClose, onUpdateFile, onDeleteFile, onDownload
                                                 <div className="space-y-4">
                                                     <motion.h3 variants={itemVariants} className="font-bold text-slate-800">Properti</motion.h3>
                                                     <motion.div variants={itemVariants} className="detail-grid">
-                                                        <div className="detail-item"><FiUser/><span>Pemilik</span><p>{file.user?.name || 'N/A'}</p></div>
-                                                        <div className="detail-item"><FiHome/><span>Lokasi</span><p>{file.parent ? 'Dalam Folder' : 'Root'}</p></div>
+                                                        {/* [PERBAIKAN] Menampilkan username dan lokasi dinamis */}
+                                                        <div className="detail-item"><FiUser/><span>Pemilik</span><p>{file.user?.username || 'N/A'}</p></div>
+                                                        <div className="detail-item"><FiHome/><span>Lokasi</span><p>{locationPath}</p></div>
                                                         <div className="detail-item"><FiTag/><span>Tipe File</span><p>{file.fileType}</p></div>
                                                         <div className="detail-item"><FiFolder/><span>Kategori</span><p>{file.category}</p></div>
                                                         <div className="detail-item"><FiCalendar/><span>Dibuat</span><p>{new Date(file.createdAt).toLocaleString('id-ID')}</p></div>

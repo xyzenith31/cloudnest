@@ -55,12 +55,7 @@ const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage }) => {
         { id: 'arsip', name: 'File Arsip', icon: FiArchive },
     ];
     return (
-        <motion.aside
-            initial={{ x: -250, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="w-64 space-y-6 sticky top-8 self-start hidden lg:block"
-        >
+        <aside className="w-64 space-y-6">
             <div className="bg-white rounded-2xl shadow-lg p-4 space-y-2">
                 <h3 className="px-4 pt-2 pb-4 text-lg font-bold text-gray-800">Kategori</h3>
                 {filters.map(filter => (
@@ -92,7 +87,7 @@ const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage }) => {
                     </div>
                 </div>
             </div>
-        </motion.aside>
+        </aside>
     );
 };
 
@@ -185,16 +180,39 @@ const MyFilesPage = () => {
                 file.fileName.toLowerCase().includes(searchTerm.toLowerCase())
             )
             .sort((a, b) => {
-                if (a.isDirectory && !b.isDirectory) return -1;
-                if (!a.isDirectory && b.isDirectory) return 1;
-                if (sort.by === 'name') return sort.order === 'asc' ? a.fileName.localeCompare(b.fileName) : b.fileName.localeCompare(a.fileName);
-                if (sort.by === 'size') return sort.order === 'asc' ? a.fileSize - b.fileSize : b.fileSize - a.fileSize;
-                return sort.order === 'asc' ? new Date(a.createdAt) - new Date(b.createdAt) : new Date(b.createdAt) - new Date(a.createdAt);
+                if (a.isDirectory !== b.isDirectory) {
+                    return a.isDirectory ? -1 : 1;
+                }
+
+                if (sort.by === 'starred') {
+                    if (a.starred !== b.starred) {
+                        return a.starred ? -1 : 1;
+                    }
+                }
+
+                let comparison = 0;
+                switch (sort.by) {
+                    case 'name':
+                        comparison = a.fileName.localeCompare(b.fileName);
+                        break;
+                    case 'size':
+                        if (!a.isDirectory && !b.isDirectory) {
+                            comparison = a.fileSize - b.fileSize;
+                        }
+                        break;
+                    case 'createdAt':
+                    case 'starred':
+                    default:
+                        comparison = new Date(a.createdAt) - new Date(b.createdAt);
+                        break;
+                }
+
+                return sort.order === 'asc' ? comparison : -comparison;
             });
     }, [filter, sort, allFiles, searchTerm, currentFolderId]);
 
 
-    const totalStorage = 10 * 1024 * 1024 * 1024; // 10 GB
+    const totalStorage = 10 * 1024 * 1024 * 1024;
     const usagePercentage = (totalSize / totalStorage) * 100;
 
     const handleItemClick = (item, event) => {
@@ -258,6 +276,7 @@ const MyFilesPage = () => {
         try {
             await deleteAllFiles();
             setNotification({ message: 'Semua file berhasil dihapus', type: 'success' });
+            setSelectedItems([]);
             fetchFiles();
         } catch (error) {
             setNotification({ message: 'Gagal menghapus semua file', type: 'error' });
@@ -308,12 +327,18 @@ const MyFilesPage = () => {
     };
 
     return (
-        <div className="flex flex-col lg:flex-row gap-8 p-4 md:p-8">
+        <div className="flex flex-col lg:flex-row gap-8">
             <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
-            <Sidebar activeFilter={filter} setActiveFilter={setFilter} usagePercentage={usagePercentage} />
+            
+            <div className="lg:w-64 lg:flex-shrink-0">
+                <div className="lg:sticky lg:top-8 self-start">
+                    <Sidebar activeFilter={filter} setActiveFilter={setFilter} usagePercentage={usagePercentage} />
+                </div>
+            </div>
+
             <main className="flex-1 min-w-0">
                 <motion.div
-                    className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col h-[calc(100vh-4rem)]"
+                    className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col h-[calc(100vh-65px-4rem)]"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
@@ -358,17 +383,18 @@ const MyFilesPage = () => {
                             </motion.button>
                         </div>
 
-                        <div className="flex items-center text-sm text-gray-500 mb-4 p-2 bg-gray-50 rounded-lg">
+                        <div className="flex items-center text-sm text-gray-500 mb-4 p-1 bg-gray-100 rounded-lg flex-wrap">
                             {folderPath.map((folder, index) => (
                                 <div key={folder._id || 'root'} className="flex items-center">
-                                    <button
+                                    <motion.button
                                         onClick={() => handleBreadcrumbClick(index)}
-                                        className="hover:text-blue-600 hover:underline font-semibold"
+                                        className="font-semibold px-3 py-1 rounded-md flex items-center gap-2 transition-colors duration-200 hover:bg-blue-100 hover:text-blue-700"
+                                        whileTap={{ scale: 0.95 }}
                                     >
-                                        {index === 0 ? <FiHome className="inline-block mr-2"/> : ''}
+                                        {index === 0 ? <FiHome className="inline-block"/> : ''}
                                         {folder.fileName}
-                                    </button>
-                                    {index < folderPath.length - 1 && <FiChevronRight className="mx-1"/>}
+                                    </motion.button>
+                                    {index < folderPath.length - 1 && <FiChevronRight className="mx-1 text-gray-400"/>}
                                 </div>
                             ))}
                         </div>
@@ -398,48 +424,53 @@ const MyFilesPage = () => {
                         </div>
                     </div>
                     
-                    <div className="flex-grow overflow-y-auto pr-2">
-                        {isLoading ? <div className="flex justify-center p-10"><LoadingSpinner/></div> :
-                        <>
-                        <motion.div
-                            key={viewMode}
-                            className={`mt-4 ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}`}
-                        >
-                            <AnimatePresence>
-                                {filteredAndSortedFiles.map(file => (
-                                    viewMode === 'list'
-                                        ? <FileListItem
-                                            key={file._id}
-                                            file={file}
-                                            allFiles={allFiles}
-                                            onItemClick={(e) => handleItemClick(file, e)}
-                                            onToggleSelect={() => handleToggleSelect(file._id)}
-                                            isSelected={selectedItems.includes(file._id)}
-                                          />
-                                        : <FileGridItem
-                                            key={file._id}
-                                            file={file}
-                                            allFiles={allFiles}
-                                            onItemClick={(e) => handleItemClick(file, e)}
-                                            onToggleSelect={() => handleToggleSelect(file._id)}
-                                            isSelected={selectedItems.includes(file._id)}
-                                          />
-                                ))}
-                            </AnimatePresence>
-                        </motion.div>
-                         {filteredAndSortedFiles.length === 0 && (
-                            <div className="text-center py-10 text-gray-500">
-                                <FiFolder size={48} className="mx-auto mb-4"/>
-                                <p className="font-semibold">Folder ini kosong</p>
+                    {/* [PERBAIKAN] Area scroll dengan placeholder yang terpusat */}
+                    <div className="flex-grow min-w-0 overflow-y-auto pr-4">
+                        {isLoading ? (
+                            <div className="flex justify-center items-center h-full">
+                                <LoadingSpinner/>
                             </div>
-                         )}
-                        </>
-                        }
+                        ) : (
+                            filteredAndSortedFiles.length > 0 ? (
+                                <motion.div
+                                    key={viewMode}
+                                    className={`mt-4 ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}`}
+                                >
+                                    <AnimatePresence>
+                                        {filteredAndSortedFiles.map(file => (
+                                            viewMode === 'list'
+                                                ? <FileListItem
+                                                    key={file._id}
+                                                    file={file}
+                                                    allFiles={allFiles}
+                                                    onItemClick={(e) => handleItemClick(file, e)}
+                                                    onToggleSelect={() => handleToggleSelect(file._id)}
+                                                    isSelected={selectedItems.includes(file._id)}
+                                                />
+                                                : <FileGridItem
+                                                    key={file._id}
+                                                    file={file}
+                                                    allFiles={allFiles}
+                                                    onItemClick={(e) => handleItemClick(file, e)}
+                                                    onToggleSelect={() => handleToggleSelect(file._id)}
+                                                    isSelected={selectedItems.includes(file._id)}
+                                                />
+                                        ))}
+                                    </AnimatePresence>
+                                </motion.div>
+                            ) : (
+                                <div className="flex flex-col justify-center items-center h-full text-center text-gray-500">
+                                    <FiFolder size={48} className="mb-4"/>
+                                    <p className="font-semibold">Folder ini kosong</p>
+                                </div>
+                            )
+                        )}
                     </div>
                 </motion.div>
 
                 <FileDetailModal
                     file={selectedFile}
+                    allFiles={allFiles} 
                     onClose={() => setSelectedFile(null)}
                     onUpdateFile={handleUpdateFile}
                     onDeleteFile={(file) => {
@@ -514,7 +545,10 @@ const FileListItem = ({ file, onItemClick, onToggleSelect, isSelected, allFiles 
       <div className="flex-grow min-w-0 flex items-center gap-4 cursor-pointer">
         {getFileIcon(file.isDirectory ? 'folder' : file.fileType, {className: "text-3xl"})}
         <div className="flex-grow min-w-0">
-          <p className="font-semibold text-gray-800 truncate">{file.fileName}</p>
+          <p className="font-semibold text-gray-800 truncate flex items-center gap-2">
+            {file.fileName}
+            {file.starred && <FiStar className="text-yellow-400 flex-shrink-0" />}
+          </p>
           <p className="text-sm text-gray-500">{new Date(file.createdAt).toLocaleDateString()}</p>
         </div>
         <p className="text-sm text-gray-600 font-medium flex-shrink-0 w-24 text-right">{!file.isDirectory ? formatBytes(file.fileSize) : `${allFiles.filter(f => f.parent === file._id).length} item`}</p>
@@ -538,6 +572,7 @@ const FileGridItem = ({ file, onItemClick, onToggleSelect, isSelected, allFiles 
         onClick={(e) => e.stopPropagation()}
         className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 absolute top-3 right-3 z-10"
       />
+       {file.starred && <FiStar className="text-yellow-400 absolute top-3 left-3 z-10" />}
       <div className="relative w-full h-20 flex items-center justify-center">
         {getFileIcon(file.isDirectory ? 'folder' : file.fileType, { className: 'text-6xl mx-auto' })}
       </div>

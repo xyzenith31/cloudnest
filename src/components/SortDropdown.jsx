@@ -1,11 +1,12 @@
 import React, { Fragment } from 'react';
 import { Menu, Transition } from '@headlessui/react';
-import { FiChevronDown, FiCheck, FiArrowDown, FiArrowUp } from 'react-icons/fi';
+import { FiChevronDown, FiCheck, FiArrowDown, FiArrowUp, FiStar } from 'react-icons/fi';
 
 const sortOptions = [
-    { by: 'date', label: 'Tanggal' },
+    { by: 'createdAt', label: 'Tanggal' },
     { by: 'name', label: 'Nama' },
     { by: 'size', label: 'Ukuran' },
+    { by: 'starred', label: 'Dibintangi' },
 ];
 
 const SortDropdown = ({ sort, setSort }) => {
@@ -44,6 +45,7 @@ const SortDropdown = ({ sort, setSort }) => {
                     } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                   >
                     {sort.by === option.by && <FiCheck className="mr-2 h-5 w-5" />}
+                    {option.label === 'Dibintangi' && <FiStar className="mr-2 h-5 w-5" />}
                     {option.label}
                   </button>
                 )}
