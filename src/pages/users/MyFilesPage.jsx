@@ -157,7 +157,7 @@ const MyFilesPage = () => {
     const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
     const [isDownloadAllModalOpen, setIsDownloadAllModalOpen] = useState(false);
     
-    const [folderPath, setFolderPath] = useState([{ _id: null, fileName: 'Root' }]);
+    const [folderPath, setFolderPath] = useState([{ _id: null, fileName: 'Home' }]);
     const currentFolderId = folderPath[folderPath.length - 1]._id;
 
     const fetchFiles = useCallback(async () => {
