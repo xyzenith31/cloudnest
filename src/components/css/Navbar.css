@@ -27,13 +27,14 @@
 .navbar-section.center {
   justify-content: center;
   flex: 2; /* Beri ruang lebih di tengah */
+  margin-right: 2rem; /* [DITAMBAHKAN] Menambahkan margin kanan untuk memberi jarak */
 }
 
 .navbar-section.right {
   justify-content: flex-end;
   flex: 1;
   gap: 1rem;
-  margin-right: 1rem;
+  /* [DIHAPUS] margin-right: 1rem; dipindahkan ke .center agar lebih efektif */
 }
 
 /* Styling logo dan link */
@@ -74,6 +75,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  position: relative;
   padding: 0.625rem 1rem;
   border-radius: 9999px;
   font-weight: 500;
@@ -102,7 +104,7 @@
   position: absolute;
   top: 0.5rem; /* Sesuaikan dengan padding .nav-links-modern */
   bottom: 0.5rem; /* Sesuaikan dengan padding .nav-links-modern */
-  height: calc(100% - 1rem);
+  /* [DIHAPUS] Properti height dihapus agar tingginya pas dengan tombol */
   background-color: #3b82f6;
   border-radius: 9999px;
   box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
