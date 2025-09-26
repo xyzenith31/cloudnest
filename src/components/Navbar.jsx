@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiHome, FiFile, FiUploadCloud, FiUsers, FiHelpCircle, FiBell, FiMenu, FiX } from 'react-icons/fi';
-import { FaCloud } from 'react-icons/fa';
+// [PERBAIKAN] Menambahkan kembali FiUploadCloud
+import { FiHome, FiFile, FiUploadCloud, FiUsers, FiHelpCircle, FiBell, FiMenu, FiX, FiActivity } from 'react-icons/fi'; 
+import { FaCloud, FaRocket } from 'react-icons/fa';
 import './css/Navbar.css';
 import NotificationDropdown from './NotificationDropdown';
 import ProfileDropdown from './ProfileDropdown';
 import { useAuth } from '../context/AuthContext';
+import { useUpload } from '../context/UploadContext';
 
 const useClickOutside = (ref, handler) => {
   useEffect(() => {
@@ -35,11 +37,13 @@ const getInitials = (name) => {
   return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
+// [PERBAIKAN] Menambahkan kembali data link untuk tombol Upload File
 const navLinksData = [
     { text: 'Beranda', to: '/beranda', icon: FiHome },
     { text: 'File Saya', to: '/beranda/my-files', icon: FiFile },
     { text: 'Upload File', to: '/beranda/upload', icon: FiUploadCloud },
     { text: 'Komunitas', to: '/beranda/community', icon: FiUsers },
+    { text: 'Riwayat Aktivitas', to: '/beranda/history', icon: FiActivity },
     { text: 'Bantuan', to: '/beranda/help', icon: FiHelpCircle },
 ];
 
@@ -72,6 +76,7 @@ const NavLinks = ({ isMobile, onLinkClick }) => {
 
 const Navbar = () => {
   const { user } = useAuth();
+  const { setPopupOpen, setPopupMinimized } = useUpload();
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -119,12 +124,16 @@ const Navbar = () => {
   const toggleProfile = () => setIsProfileOpen(prev => !prev);
   const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
 
+  const handleQuickUploadClick = () => {
+    setPopupOpen(true);
+    setPopupMinimized(false);
+  };
+
   const containerVariants = {
       hidden: { transition: { staggerChildren: 0.05, staggerDirection: -1 } },
       visible: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } },
   };
   
-  // [PERBAIKAN] Gunakan user.username untuk tampilan, dan user.name untuk dropdown
   const displayUsername = user ? user.username : 'Tamu';
   const userFullName = user ? user.name : 'Nama Tamu';
   const userEmail = user ? user.email : 'tamu@email.com';
@@ -153,6 +162,15 @@ const Navbar = () => {
         </div>
 
         <div className="navbar-section right">
+          <motion.button 
+            whileTap={{ scale: 0.9 }} 
+            onClick={handleQuickUploadClick} 
+            className="icon-button-modern rocket-button"
+            title="Upload Cepat"
+          >
+            <FaRocket /> 
+          </motion.button>
+          
           <div ref={notifRef} className="navbar-item-wrapper">
             <motion.button whileTap={{ scale: 0.9 }} onClick={toggleNotif} className="icon-button-modern">
               <FiBell />

@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    FiStar, FiClock, FiFile, FiHardDrive, FiFolder, FiUploadCloud, FiMusic
+    FiStar, FiClock, FiFile, FiHardDrive, FiFolder, FiMusic
 } from 'react-icons/fi';
 import { FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo } from 'react-icons/fa';
 import FileDetailModal from '../../components/FileDetailModal';
 import { getUserFiles, updateFile, deleteFile, downloadFile } from '../../services/fileService';
 import { useAuth } from '../../context/AuthContext';
-import { useUpload } from '../../context/UploadContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Notification from '../../components/Notification';
 
@@ -21,7 +20,6 @@ const formatBytes = (bytes, decimals = 2) => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 };
 
-// [PERBAIKAN] Fungsi ikon dibuat lebih lengkap untuk mengenali berbagai jenis file
 const getFileIcon = (type) => {
   if (!type) return <FiFile className="text-gray-500" />;
   if (type.startsWith('image/')) return <FaFileImage className="text-purple-500" />;
@@ -37,7 +35,6 @@ const getFileIcon = (type) => {
 // --- KOMPONEN UTAMA ---
 const UserBeranda = () => {
   const { user } = useAuth();
-  const { setPopupOpen, setPopupMinimized } = useUpload();
   const [selectedFile, setSelectedFile] = useState(null);
   const [allFiles, setAllFiles] = useState([]);
   const [stats, setStats] = useState({
@@ -85,11 +82,6 @@ const UserBeranda = () => {
     [allFiles]
   );
   
-  const handleQuickUploadClick = () => {
-      setPopupOpen(true);
-      setPopupMinimized(false);
-  };
-
   const handleUpdateFile = async (updateData) => {
     const fileToUpdate = selectedFile;
     if (!fileToUpdate) return;
@@ -150,25 +142,14 @@ const UserBeranda = () => {
     <>
       <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
       <div className="p-4 md:p-6 lg:p-8 space-y-8 overflow-hidden">
+        {/* [PERBAIKAN] Tombol Upload Cepat dihapus dari sini */}
         <motion.div
           initial={{ opacity: 0, y: -40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
         >
-          <div>
-            <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight">Selamat Datang, {user?.name}!</h1>
-            <p className="text-gray-500 mt-1">Kelola duniamu dalam satu tempat.</p>
-          </div>
-          <motion.button
-            onClick={handleQuickUploadClick}
-            whileHover={{ scale: 1.05, boxShadow: '0px 10px 25px -10px rgba(59, 130, 246, 0.5)' }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-gradient-to-r from-blue-500 to-sky-500 text-white font-bold px-8 py-3 rounded-full flex items-center gap-2 shadow-lg transition-all duration-300 w-full md:w-auto justify-center"
-          >
-            <FiUploadCloud />
-            <span>Upload Cepat</span>
-          </motion.button>
+          <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight">Selamat Datang, {user?.name}!</h1>
+          <p className="text-gray-500 mt-1">Kelola duniamu dalam satu tempat.</p>
         </motion.div>
 
         {isLoading ? <div className="flex justify-center p-10"><LoadingSpinner/></div> : (
@@ -260,6 +241,7 @@ const UserBeranda = () => {
   );
 };
 
+// ... Sisa komponen (StatCard, StorageStatCard, FileListItem) tetap sama ...
 const StatCard = ({ icon: Icon, label, value, color }) => {
     const itemVariants = { hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1, transition: { type: 'spring' } }};
     const colors = {
