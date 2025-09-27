@@ -12,7 +12,7 @@ const UserLayout = () => {
       <Navbar />
       {/* [PERBAIKAN KUNCI] `overflow-y-auto` dikembalikan agar halaman lain bisa scroll.
           Halaman MyFilesPage akan menimpa perilaku ini secara internal. */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+      <main className="flex-1">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

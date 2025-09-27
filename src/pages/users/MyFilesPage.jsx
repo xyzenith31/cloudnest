@@ -409,10 +409,7 @@ const MyFilesPage = () => {
     };
 
     return (
-        <div 
-          className="flex flex-col lg:flex-row gap-8 lg:items-stretch"
-          style={{ height: 'calc(100vh - 65px - 4rem)' }} 
-        >
+        <div className="p-4 md:p-8 flex flex-col lg:flex-row gap-8 h-full">
             <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
             
             <div className="lg:w-64 lg:flex-shrink-0">
