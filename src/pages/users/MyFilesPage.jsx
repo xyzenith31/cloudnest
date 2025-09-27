@@ -235,7 +235,6 @@ const MyFilesPage = () => {
     const currentFolderId = folderPath[folderPath.length - 1]._id;
 
     const fetchFiles = useCallback(async () => {
-        // [PERBAIKAN] Hanya set loading true jika belum loading
         if (!isLoading) setIsLoading(true);
         try {
             const response = await getUserFiles();
@@ -246,12 +245,12 @@ const MyFilesPage = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [isLoading]); // [PERBAIKAN] Kembalikan `isLoading` sebagai dependensi
+    }, [isLoading]); 
 
     useEffect(() => {
         fetchFiles();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // [PERBAIKAN] Hanya panggil sekali saat mount
+    }, []); 
 
     const filteredAndSortedFiles = useMemo(() => {
         return allFiles
@@ -409,7 +408,10 @@ const MyFilesPage = () => {
     };
 
     return (
-        <div className="p-4 md:p-8 flex flex-col lg:flex-row gap-8 h-full">
+        <div 
+          className="flex flex-col lg:flex-row gap-8"
+          style={{ height: 'calc(100vh - 65px - 4rem)' }} 
+        >
             <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
             
             <div className="lg:w-64 lg:flex-shrink-0">
