@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api/files'; // Sesuaikan dengan URL backend Anda
+const API_URL = 'http://localhost:3001/api/files';
 
 const getAuthHeaders = () => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -22,9 +22,13 @@ export const uploadFile = (formData, onUploadProgress) => {
     });
 };
 
-
-export const deleteFile = (fileId) => {
-    return axios.delete(`${API_URL}/${fileId}`, getAuthHeaders());
+// [MODIFIKASI] Tambahkan parameter `permanent`
+export const deleteFile = (fileId, permanent = false) => {
+    const config = getAuthHeaders();
+    if (permanent) {
+        config.params = { permanent: true };
+    }
+    return axios.delete(`${API_URL}/${fileId}`, config);
 };
 
 export const deleteAllFiles = () => {
@@ -47,10 +51,10 @@ export const downloadFile = async (fileId, fileName) => {
 
 
 export const downloadAllFiles = async (downloadData) => {
-    const { fileIds, zipName, username } = downloadData;
+    const { fileIds, zipName } = downloadData;
     try {
         const response = await axios.post(`${API_URL}/download-all`, 
-            { fileIds, zipName }, // Kirim data sebagai body
+            { fileIds, zipName },
             {
                 ...getAuthHeaders(),
                 responseType: 'blob'
@@ -59,7 +63,6 @@ export const downloadAllFiles = async (downloadData) => {
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
-        // Pastikan nama file diakhiri dengan .zip
         const finalFileName = (zipName.endsWith('.zip') ? zipName : `${zipName}.zip`);
         link.setAttribute('download', finalFileName);
         document.body.appendChild(link);
@@ -71,7 +74,6 @@ export const downloadAllFiles = async (downloadData) => {
     }
 };
 
-// --- [FUNGSI BARU] ---
 export const createFolder = (folderName, parentId = null) => {
     return axios.post(`${API_URL}/folder`, { folderName, parentId }, getAuthHeaders());
 };
@@ -82,4 +84,12 @@ export const moveFiles = (fileIds, destinationFolderId) => {
 
 export const updateFile = (fileId, updateData) => {
     return axios.put(`${API_URL}/${fileId}`, updateData, getAuthHeaders());
+};
+
+export const restoreAllFiles = () => {
+    return axios.post(`${API_URL}/restore-all`, {}, getAuthHeaders());
+};
+
+export const emptyTrash = () => {
+    return axios.delete(`${API_URL}/empty-trash`, getAuthHeaders());
 };
