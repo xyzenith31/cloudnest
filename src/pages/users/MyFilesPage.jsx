@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    FiImage, FiVideo, FiFileText, FiArchive, FiGrid, FiList, FiStar, FiCpu,
-    FiAperture, FiSearch, FiHardDrive, FiDownload, FiTrash2, FiAlertTriangle, FiMusic, FiFolder, FiPlus, FiMove, FiChevronRight, FiHome, FiRefreshCw, FiTrash, FiChevronDown
+    FiImage, FiVideo, FiFileText, FiArchive, FiGrid, FiList, FiStar, FiCpu, FiBarChart2, FiX,
+    FiAperture, FiSearch, FiHardDrive, FiDownload, FiTrash2, FiAlertTriangle, FiMusic, FiFolder, FiPlus, FiMove, FiChevronRight, FiHome, FiRefreshCw, FiTrash
 } from 'react-icons/fi';
 import {
     FaFilePdf, FaFileWord, FaFileImage, FaFileArchive, FaFileVideo, FaAndroid,
@@ -66,10 +66,82 @@ const getFileIcon = (file, props = {}) => {
     }
 };
 
-// --- Sidebar ---
-const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage, totalSize, allFiles }) => {
-    const [isStorageDetailVisible, setIsStorageDetailVisible] = useState(false);
+// --- Storage Detail Modal Component ---
+const StorageDetailModal = ({ isOpen, onClose, totalSize, categoryData, trashedSize }) => {
+    if (!isOpen) return null;
+    const totalStorage = 10 * 1024 * 1024 * 1024; // 10 GB
+    const usagePercentage = (totalSize / totalStorage) * 100;
 
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4"
+                onClick={onClose}
+            >
+                <motion.div
+                    initial={{ scale: 0.9, y: 20 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.9, y: 20 }}
+                    className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <FiHardDrive /> Total Penyimpanan
+                        </h2>
+                        <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100"><FiX /></button>
+                    </div>
+
+                    <p className="text-center text-3xl font-bold text-gray-800 my-4">
+                        {formatBytes(totalSize, 1)} <span className="text-lg text-gray-500 font-medium"> / 10 GB</span>
+                    </p>
+
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 my-3">
+                        <motion.div
+                            className="bg-gradient-to-r from-sky-500 to-blue-500 h-2.5 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${usagePercentage}%` }}
+                            transition={{ duration: 1, ease: 'easeOut' }}
+                        />
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t space-y-3">
+                        {categoryData.length > 0 ? categoryData.map(cat => (
+                            <div key={cat.label} className="flex justify-between items-center text-sm">
+                                <span className="flex items-center gap-3">
+                                    <span className={`w-8 h-8 rounded-lg ${cat.color} flex items-center justify-center text-white`}>
+                                        <cat.icon />
+                                    </span>
+                                    <span className="font-semibold text-gray-700">{cat.label}</span>
+                                </span>
+                                <span className="font-medium text-gray-800">{formatBytes(cat.size)}</span>
+                            </div>
+                        )) : <p className="text-sm text-center text-gray-400">Penyimpanan Anda masih kosong.</p>}
+                        
+                        {trashedSize > 0 && (
+                             <div className="flex justify-between items-center text-sm pt-3 border-t mt-3">
+                                <span className="flex items-center gap-3">
+                                    <span className="w-8 h-8 rounded-lg bg-red-500 flex items-center justify-center text-white">
+                                        <FiTrash2 />
+                                    </span>
+                                    <span className="font-semibold text-gray-700">File di Sampah</span>
+                                </span>
+                                <span className="font-medium text-gray-800">{formatBytes(trashedSize)}</span>
+                            </div>
+                        )}
+                    </div>
+                </motion.div>
+            </motion.div>
+        </AnimatePresence>
+    );
+};
+
+
+// --- Sidebar ---
+const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage, totalSize, onStorageDetailClick }) => {
     const filters = [
         { id: 'all', name: 'Semua Media', icon: FiAperture },
         { id: 'foto', name: 'Foto', icon: FiImage },
@@ -80,26 +152,6 @@ const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage, totalSize, al
         { id: 'arsip', name: 'File Arsip', icon: FiArchive },
         { id: 'trash', name: 'Tempat Sampah', icon: FiTrash2 },
     ];
-
-    const categoryData = useMemo(() => {
-        const categories = {
-            foto: { label: 'Foto', size: 0, color: 'bg-purple-500' },
-            video: { label: 'Video', size: 0, color: 'bg-indigo-500' },
-            music: { label: 'Musik', size: 0, color: 'bg-pink-500' },
-            dokumen: { label: 'Dokumen', size: 0, color: 'bg-blue-500' },
-            arsip: { label: 'Arsip', size: 0, color: 'bg-yellow-500' },
-            apk: { label: 'APK', size: 0, color: 'bg-green-500' },
-            aplikasi: { label: 'Aplikasi', size: 0, color: 'bg-gray-500' },
-        };
-
-        allFiles.forEach(file => {
-            if (file.status === 'active' && !file.isDirectory && categories[file.category]) {
-                categories[file.category].size += file.fileSize;
-            }
-        });
-
-        return Object.values(categories).filter(cat => cat.size > 0).sort((a, b) => b.size - a.size);
-    }, [allFiles]);
 
     return (
         <aside className="w-64 space-y-6">
@@ -135,33 +187,17 @@ const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage, totalSize, al
                     <span className="font-bold text-gray-800">{formatBytes(totalSize)}</span> dari 10 GB terpakai
                 </motion.p>
                 
-                <AnimatePresence>
-                    {isStorageDetailVisible && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                            animate={{ height: 'auto', opacity: 1, marginTop: '1rem' }}
-                            exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                            className="overflow-hidden"
-                        >
-                            <div className="pt-4 border-t space-y-3">
-                                {categoryData.length > 0 ? categoryData.map(cat => (
-                                    <div key={cat.label}>
-                                        <div className="flex justify-between items-center text-sm mb-1">
-                                            <span className="flex items-center gap-2">
-                                                <span className={`w-2 h-2 rounded-full ${cat.color}`} />
-                                                {cat.label}
-                                            </span>
-                                            <span className="font-medium">{formatBytes(cat.size)}</span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                            <div className={`h-1.5 rounded-full ${cat.color}`} style={{ width: `${(cat.size / (totalSize || 1)) * 100}%` }}></div>
-                                        </div>
-                                    </div>
-                                )) : <p className="text-xs text-center text-gray-400">Belum ada file yang disimpan.</p>}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                <div className="text-center mt-4">
+                    <motion.button
+                        onClick={onStorageDetailClick}
+                        className="flex items-center justify-center gap-2 mx-auto px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-100/70 rounded-full hover:bg-blue-200/70 transition-colors"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        <FiBarChart2 />
+                        <span>Rincian</span>
+                    </motion.button>
+                </div>
             </motion.div>
         </aside>
     );
@@ -231,6 +267,7 @@ const MyFilesPage = () => {
     const [isDownloadAllModalOpen, setIsDownloadAllModalOpen] = useState(false);
     const [isRestoreAllModalOpen, setIsRestoreAllModalOpen] = useState(false);
     const [isEmptyTrashModalOpen, setIsEmptyTrashModalOpen] = useState(false);
+    const [isStorageModalOpen, setIsStorageModalOpen] = useState(false);
     const [folderPath, setFolderPath] = useState([{ _id: null, fileName: 'Home' }]);
     const currentFolderId = folderPath[folderPath.length - 1]._id;
 
@@ -292,10 +329,34 @@ const MyFilesPage = () => {
                 return sort.order === 'asc' ? comparison : -comparison;
             });
     }, [filter, sort, allFiles, searchTerm, currentFolderId]);
+    
+    const { categoryData, trashedSize } = useMemo(() => {
+        const categories = {
+            foto: { icon: FiImage, label: 'Gambar', size: 0, color: 'bg-purple-500' },
+            video: { icon: FiVideo, label: 'Video', size: 0, color: 'bg-indigo-500' },
+            music: { icon: FiMusic, label: 'Audio', size: 0, color: 'bg-pink-500' },
+            dokumen: { icon: FiFileText, label: 'Dokumen', size: 0, color: 'bg-blue-500' },
+            arsip: { icon: FiArchive, label: 'Arsip', size: 0, color: 'bg-yellow-500' },
+            apk: { icon: FiCpu, label: 'Aplikasi', size: 0, color: 'bg-green-500' },
+        };
+        let calculatedTrashedSize = 0;
+        allFiles.forEach(file => {
+            if (file.status === 'trashed') {
+                calculatedTrashedSize += file.fileSize;
+            } else if (!file.isDirectory && categories[file.category]) {
+                categories[file.category].size += file.fileSize;
+            }
+        });
+        return {
+            categoryData: Object.values(categories).filter(cat => cat.size > 0).sort((a, b) => b.size - a.size),
+            trashedSize: calculatedTrashedSize,
+        };
+    }, [allFiles]);
 
     const totalStorage = 10 * 1024 * 1024 * 1024;
     const usagePercentage = (totalSize / totalStorage) * 100;
 
+    // ... (sisa fungsi handle tetap sama)
     const handleItemClick = (item, event) => {
         if (event.detail >= 2) {
             if (item.isDirectory) {
@@ -305,11 +366,9 @@ const MyFilesPage = () => {
             }
         }
     };
-    
     const handleBreadcrumbClick = (index) => setFolderPath(prev => prev.slice(0, index + 1));
     const handleToggleSelect = (itemId) => setSelectedItems(prev => prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]);
     const handleSelectAll = () => setSelectedItems(selectedItems.length === filteredAndSortedFiles.length ? [] : filteredAndSortedFiles.map(f => f._id));
-
     const handleUpdateFile = async (updateData) => {
         const fileIdToUpdate = selectedFile?._id || updateData._id;
         if (!fileIdToUpdate) return;
@@ -326,14 +385,12 @@ const MyFilesPage = () => {
             if (selectedFile) setSelectedFile(null);
         }
     };
-
     const handleDeleteConfirmation = () => {
         const itemsToDelete = allFiles.filter(f => selectedItems.includes(f._id));
         const title = filter === 'trash' ? `Hapus Permanen ${itemsToDelete.length} Item?` : `Hapus ${itemsToDelete.length} Item?`;
         const message = filter === 'trash' ? `Anda akan menghapus ${itemsToDelete.length} item secara permanen. Tindakan ini tidak dapat dibatalkan.` : `Anda akan memindahkan ${itemsToDelete.length} item ke tempat sampah.`;
         setDeleteConfirmation({ isOpen: true, items: itemsToDelete, title, message });
     };
-
     const executeDeleteAll = async () => {
         setIsDeleteAllModalOpen(false);
         try {
@@ -345,7 +402,6 @@ const MyFilesPage = () => {
             setNotification({ message: 'Gagal menghapus semua file', type: 'error' });
         }
     };
-
     const executeDelete = async () => {
         const itemsToDelete = deleteConfirmation.items;
         setDeleteConfirmation({ isOpen: false, items: [] });
@@ -362,7 +418,6 @@ const MyFilesPage = () => {
             setNotification({ message: 'Gagal menghapus item.', type: 'error' });
         }
     };
-
     const handleCreateFolder = async (folderName) => {
         setCreateFolderModalOpen(false);
         try {
@@ -373,7 +428,6 @@ const MyFilesPage = () => {
             setNotification({ message: 'Gagal membuat folder', type: 'error' });
         }
     };
-
     const handleMoveSelected = async (destinationFolderId) => {
         try {
             await moveFiles(selectedItems, destinationFolderId);
@@ -384,7 +438,6 @@ const MyFilesPage = () => {
             setNotification({ message: error.response?.data?.message || 'Gagal memindahkan item', type: 'error' });
         }
     };
-
     const handleRestoreAll = async () => {
         setIsRestoreAllModalOpen(false);
         try {
@@ -395,7 +448,6 @@ const MyFilesPage = () => {
             setNotification({ message: 'Gagal memulihkan file', type: 'error' });
         }
     };
-
     const handleEmptyTrash = async () => {
         setIsEmptyTrashModalOpen(false);
         try {
@@ -407,9 +459,10 @@ const MyFilesPage = () => {
         }
     };
 
+
     return (
         <div 
-          className="flex flex-col lg:flex-row gap-8"
+          className="flex flex-col lg:flex-row lg:items-start gap-8"
           style={{ height: 'calc(100vh - 65px - 4rem)' }} 
         >
             <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
@@ -421,12 +474,12 @@ const MyFilesPage = () => {
                         setActiveFilter={setFilter} 
                         usagePercentage={usagePercentage} 
                         totalSize={totalSize}
-                        allFiles={allFiles}
+                        onStorageDetailClick={() => setIsStorageModalOpen(true)}
                     />
                 </div>
             </div>
 
-            <main className="flex-1 min-w-0 flex flex-col">
+            <main className="flex-1 min-w-0 flex flex-col h-full">
                 <motion.div
                     className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col h-full"
                     initial={{ opacity: 0, y: 20 }}
@@ -538,7 +591,9 @@ const MyFilesPage = () => {
                         }
                     </div>
                 </motion.div>
-
+                
+                {/* Modals */}
+                <StorageDetailModal isOpen={isStorageModalOpen} onClose={() => setIsStorageModalOpen(false)} totalSize={totalSize} categoryData={categoryData} trashedSize={trashedSize} />
                 <FileDetailModal file={selectedFile} allFiles={allFiles} onClose={() => setSelectedFile(null)} onUpdateFile={handleUpdateFile}
                     onDeleteFile={(file) => {
                         setDeleteConfirmation({ isOpen: true, items: [file], title: `Hapus File "${file.fileName}"?`, message: `Anda akan memindahkan file ini ke tempat sampah.` });
@@ -550,14 +605,7 @@ const MyFilesPage = () => {
                 <ConfirmationModal isOpen={isDeleteAllModalOpen} onClose={() => setIsDeleteAllModalOpen(false)} onConfirm={executeDeleteAll} title="Hapus Semua File?" message="Apakah Anda yakin ingin memindahkan SEMUA file Anda ke tempat sampah? Anda masih bisa memulihkannya nanti." />
                 <ConfirmationModal isOpen={isRestoreAllModalOpen} onClose={() => setIsRestoreAllModalOpen(false)} onConfirm={handleRestoreAll} title="Pulihkan Semua File?" message="Semua item di tempat sampah akan dikembalikan ke lokasi aslinya." confirmText="Ya, Pulihkan" color="blue" />
                 <ConfirmationModal isOpen={isEmptyTrashModalOpen} onClose={() => setIsEmptyTrashModalOpen(false)} onConfirm={handleEmptyTrash} title="Kosongkan Tempat Sampah?" message="Semua item akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan." confirmText="Ya, Hapus Permanen" color="red" />
-                
-                <MoveFilesModal 
-                    isOpen={isMoveModalOpen} 
-                    onClose={() => setIsMoveModalOpen(false)} 
-                    onMove={handleMoveSelected} 
-                    allFiles={allFiles.filter(f => f.status !== 'trashed')} 
-                    currentFolderId={currentFolderId} 
-                />
+                <MoveFilesModal isOpen={isMoveModalOpen} onClose={() => setIsMoveModalOpen(false)} onMove={handleMoveSelected} allFiles={allFiles.filter(f => f.status !== 'trashed')} currentFolderId={currentFolderId} />
                 <NewFolderModal isOpen={isCreateFolderModalOpen} onClose={() => setCreateFolderModalOpen(false)} onCreate={handleCreateFolder} />
                 <DownloadAllModal isOpen={isDownloadAllModalOpen} onClose={() => setIsDownloadAllModalOpen(false)} allFiles={allFiles.filter(f => !f.isDirectory)} onDownload={downloadAllFiles} user={user} setNotification={setNotification} />
             </main>
