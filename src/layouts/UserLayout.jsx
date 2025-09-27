@@ -7,12 +7,11 @@ const UserLayout = () => {
   const location = useLocation();
 
   return (
-    // [DIPERBAIKI] Layout diubah menjadi flex-col setinggi layar (h-screen)
-    // dan overflow-hidden untuk mencegah scrollbar di body utama.
+    // [PERBAIKAN] Mengembalikan struktur layout utama agar tidak merusak halaman lain
     <div className="bg-gray-50 h-screen flex flex-col overflow-hidden">
       <Navbar />
-      {/* [DIPERBAIKI] Area <main> sekarang menjadi fleksibel (flex-1) 
-          dan akan memiliki scrollbar sendiri (overflow-y-auto) jika kontennya panjang. */}
+      {/* [PERBAIKAN KUNCI] `overflow-y-auto` dikembalikan agar halaman lain bisa scroll.
+          Halaman MyFilesPage akan menimpa perilaku ini secara internal. */}
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <AnimatePresence mode="wait">
           <motion.div

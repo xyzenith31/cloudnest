@@ -162,17 +162,6 @@ const Sidebar = ({ activeFilter, setActiveFilter, usagePercentage, totalSize, al
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                <motion.button 
-                    layout
-                    onClick={() => setIsStorageDetailVisible(!isStorageDetailVisible)}
-                    className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-blue-600 bg-blue-100 rounded-lg hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                    <span>{isStorageDetailVisible ? 'Sembunyikan' : 'Lihat Rincian'}</span>
-                    <motion.div animate={{ rotate: isStorageDetailVisible ? 180 : 0 }}>
-                        <FiChevronDown />
-                    </motion.div>
-                </motion.button>
             </motion.div>
         </aside>
     );
@@ -246,6 +235,7 @@ const MyFilesPage = () => {
     const currentFolderId = folderPath[folderPath.length - 1]._id;
 
     const fetchFiles = useCallback(async () => {
+        // [PERBAIKAN] Hanya set loading true jika belum loading
         if (!isLoading) setIsLoading(true);
         try {
             const response = await getUserFiles();
@@ -256,11 +246,12 @@ const MyFilesPage = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [isLoading]);
+    }, [isLoading]); // [PERBAIKAN] Kembalikan `isLoading` sebagai dependensi
 
     useEffect(() => {
         fetchFiles();
-    }, [fetchFiles]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // [PERBAIKAN] Hanya panggil sekali saat mount
 
     const filteredAndSortedFiles = useMemo(() => {
         return allFiles
@@ -328,10 +319,10 @@ const MyFilesPage = () => {
         try {
             await updateFile(fileIdToUpdate, updateData);
             setNotification({ message: 'File berhasil diperbarui', type: 'success' });
-            fetchFiles();
+            await fetchFiles();
         } catch (error) {
             setNotification({ message: 'Gagal memperbarui file', type: 'error' });
-            fetchFiles();
+            await fetchFiles();
         } finally {
             if (selectedFile) setSelectedFile(null);
         }
@@ -345,56 +336,51 @@ const MyFilesPage = () => {
     };
 
     const executeDeleteAll = async () => {
+        setIsDeleteAllModalOpen(false);
         try {
             await deleteAllFiles();
             setNotification({ message: 'Semua file berhasil dipindahkan ke sampah', type: 'success' });
             setSelectedItems([]);
-            fetchFiles();
+            await fetchFiles();
         } catch (error) {
             setNotification({ message: 'Gagal menghapus semua file', type: 'error' });
-        } finally {
-            setIsDeleteAllModalOpen(false);
         }
     };
 
     const executeDelete = async () => {
         const itemsToDelete = deleteConfirmation.items;
-        const previousFiles = [...allFiles];
-        setAllFiles(prev => prev.filter(f => !itemsToDelete.some(item => item._id === f._id)));
         setDeleteConfirmation({ isOpen: false, items: [] });
-        setSelectedItems([]);
+        const isPermanent = filter === 'trash';
         try {
-            const isPermanent = filter === 'trash';
             for (const item of itemsToDelete) {
                 await deleteFile(item._id, isPermanent);
             }
             const message = isPermanent ? `${itemsToDelete.length} item berhasil dihapus permanen` : `${itemsToDelete.length} item dipindahkan ke sampah`;
             setNotification({ message, type: 'success' });
-            fetchFiles();
+            setSelectedItems([]);
+            await fetchFiles();
         } catch (error) {
-            setNotification({ message: 'Gagal menghapus item, mengembalikan data.', type: 'error' });
-            setAllFiles(previousFiles);
+            setNotification({ message: 'Gagal menghapus item.', type: 'error' });
         }
     };
 
     const handleCreateFolder = async (folderName) => {
+        setCreateFolderModalOpen(false);
         try {
             await createFolder(folderName, currentFolderId);
             setNotification({ message: 'Folder berhasil dibuat', type: 'success' });
-            fetchFiles();
+            await fetchFiles();
         } catch (error) {
             setNotification({ message: 'Gagal membuat folder', type: 'error' });
-        } finally {
-            setCreateFolderModalOpen(false);
         }
     };
 
     const handleMoveSelected = async (destinationFolderId) => {
         try {
-            const response = await moveFiles(selectedItems, destinationFolderId);
-            setNotification({ message: response.data.message || 'Item berhasil dipindahkan', type: 'success' });
-            fetchFiles();
+            await moveFiles(selectedItems, destinationFolderId);
+            setNotification({ message: 'Item berhasil dipindahkan', type: 'success' });
             setSelectedItems([]);
+            await fetchFiles();
         } catch (error) {
             setNotification({ message: error.response?.data?.message || 'Gagal memindahkan item', type: 'error' });
         }
@@ -405,7 +391,7 @@ const MyFilesPage = () => {
         try {
             await restoreAllFiles();
             setNotification({ message: 'Semua file berhasil dipulihkan', type: 'success' });
-            fetchFiles();
+            await fetchFiles();
         } catch (error) {
             setNotification({ message: 'Gagal memulihkan file', type: 'error' });
         }
@@ -416,18 +402,21 @@ const MyFilesPage = () => {
         try {
             await emptyTrash();
             setNotification({ message: 'Tempat sampah berhasil dikosongkan', type: 'success' });
-            fetchFiles();
+            await fetchFiles();
         } catch (error) {
             setNotification({ message: 'Gagal mengosongkan sampah', type: 'error' });
         }
     };
 
     return (
-        <div className="flex flex-col lg:flex-row gap-8 lg:items-start">
+        <div 
+          className="flex flex-col lg:flex-row gap-8 lg:items-stretch"
+          style={{ height: 'calc(100vh - 65px - 4rem)' }} 
+        >
             <Notification message={notification.message} type={notification.type} onClose={() => setNotification({ message: '', type: '' })} />
             
             <div className="lg:w-64 lg:flex-shrink-0">
-                <div className="self-start">
+                <div className="sticky top-0">
                     <Sidebar 
                         activeFilter={filter} 
                         setActiveFilter={setFilter} 
@@ -438,9 +427,9 @@ const MyFilesPage = () => {
                 </div>
             </div>
 
-            <main className="flex-1 min-w-0">
+            <main className="flex-1 min-w-0 flex flex-col">
                 <motion.div
-                    className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col h-full min-h-[calc(100vh-65px-4rem)]"
+                    className="bg-white/70 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 flex flex-col h-full"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
@@ -530,7 +519,7 @@ const MyFilesPage = () => {
                         </div>
                     </div>
 
-                    <div className="flex-grow min-w-0 overflow-y-auto pr-4">
+                    <div className="flex-grow min-h-0 overflow-y-auto pr-4">
                         {isLoading ? <div className="flex justify-center items-center h-full"><LoadingSpinner /></div>
                             : filteredAndSortedFiles.length > 0 ? (
                                 <motion.div key={viewMode} className={`mt-4 ${viewMode === 'grid' && filter !== 'trash' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-3'}`}>
@@ -562,7 +551,14 @@ const MyFilesPage = () => {
                 <ConfirmationModal isOpen={isDeleteAllModalOpen} onClose={() => setIsDeleteAllModalOpen(false)} onConfirm={executeDeleteAll} title="Hapus Semua File?" message="Apakah Anda yakin ingin memindahkan SEMUA file Anda ke tempat sampah? Anda masih bisa memulihkannya nanti." />
                 <ConfirmationModal isOpen={isRestoreAllModalOpen} onClose={() => setIsRestoreAllModalOpen(false)} onConfirm={handleRestoreAll} title="Pulihkan Semua File?" message="Semua item di tempat sampah akan dikembalikan ke lokasi aslinya." confirmText="Ya, Pulihkan" color="blue" />
                 <ConfirmationModal isOpen={isEmptyTrashModalOpen} onClose={() => setIsEmptyTrashModalOpen(false)} onConfirm={handleEmptyTrash} title="Kosongkan Tempat Sampah?" message="Semua item akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan." confirmText="Ya, Hapus Permanen" color="red" />
-                <MoveFilesModal isOpen={isMoveModalOpen} onClose={() => setIsMoveModalOpen(false)} onMove={handleMoveSelected} allFiles={allFiles} currentFolderId={currentFolderId} />
+                
+                <MoveFilesModal 
+                    isOpen={isMoveModalOpen} 
+                    onClose={() => setIsMoveModalOpen(false)} 
+                    onMove={handleMoveSelected} 
+                    allFiles={allFiles.filter(f => f.status !== 'trashed')} 
+                    currentFolderId={currentFolderId} 
+                />
                 <NewFolderModal isOpen={isCreateFolderModalOpen} onClose={() => setCreateFolderModalOpen(false)} onCreate={handleCreateFolder} />
                 <DownloadAllModal isOpen={isDownloadAllModalOpen} onClose={() => setIsDownloadAllModalOpen(false)} allFiles={allFiles.filter(f => !f.isDirectory)} onDownload={downloadAllFiles} user={user} setNotification={setNotification} />
             </main>
