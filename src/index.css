@@ -1,3 +1,4 @@
+/* [DIKEMBALIKAN] Impor font Noto Color Emoji dihapus */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
@@ -9,6 +10,7 @@ html {
 }
 
 body {
+  /* [DIKEMBALIKAN] Menghapus 'Noto Color Emoji' dari daftar font-family */
   font-family: 'Poppins', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -18,4 +20,65 @@ body {
   .form-input {
     @apply w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300;
   }
+}
+
+/* === GAYA BARU UNTUK HALAMAN KOMUNITAS === */
+
+.chat-background {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d1d5db' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background-color: #f1f5f9;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 20px;
+    border: 2px solid #f1f5f9;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
+
+.chat-list-item:hover .avatar-image {
+    transform: scale(1.1);
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.input-chat {
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+.input-chat:focus-within {
+    box-shadow: 0 0 8px 4px rgba(59, 130, 246, 0.7);
+}
+
+.message-bubble-me {
+    transform-origin: bottom right;
+}
+.message-bubble-other {
+    transform-origin: bottom left;
+}
+
+.message-bubble-wrapper:hover .message-actions {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.message-actions {
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    transform: translateY(4px);
+}
+
+/* [BARU] Menambahkan gaya untuk gambar emoji hasil parse Twemoji */
+.message-bubble-wrapper .emoji {
+    width: 1.25em;
+    height: 1.25em;
+    margin: 0 0.05em 0 0.1em;
+    vertical-align: -0.2em;
 }

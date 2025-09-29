@@ -23,6 +23,7 @@
     "recharts": "^3.2.1",
     "socket.io-client": "^4.8.1",
     "tailwindcss-filters": "^3.0.0",
+    "twemoji": "^14.0.2",
     "vanilla-tilt": "^1.8.1"
   },
   "devDependencies": {
