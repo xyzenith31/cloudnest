@@ -6,10 +6,10 @@ import {
     FiPhone, FiVideo, FiUserPlus, FiUsers, FiRadio, FiBookmark, FiSettings, 
     FiArchive, FiBellOff, FiUser, FiThumbsUp, FiImage, FiFileText, FiLink, FiChevronDown, FiInfo
 } from 'react-icons/fi';
+import EmojiPicker from '../../components/EmojiPicker'; 
 import ChatActionMenu from '../../components/ChatActionMenu';
 import MessageActionMenu from '../../components/MessageActionMenu';
 import ProfileCardModal from '../../components/ProfileCardModal';
-
 
 // --- FUNGSI & DATA DUMMY (Tidak Berubah) ---
 const getInitials = (name) => { if (!name || typeof name !== 'string') return '?'; const nameParts = name.trim().split(' ').filter(Boolean); if (nameParts.length === 0) return '?'; if (nameParts.length === 1) return nameParts[0].substring(0, 2).toUpperCase(); const firstInitial = nameParts[0][0]; const lastInitial = nameParts[nameParts.length - 1][0]; return `${firstInitial}${lastInitial}`.toUpperCase(); };
@@ -43,11 +43,14 @@ const KomunitasPage = () => {
     const [messageMenu, setMessageMenu] = useState(null);
     const [chatMenu, setChatMenu] = useState(null);
     const [viewedProfile, setViewedProfile] = useState(null);
+    const [isEmojiPickerOpen, setEmojiPickerOpen] = useState(false);
+    const [showEmojiTooltip, setShowEmojiTooltip] = useState(false);
 
     const navigate = useNavigate();
     const messagesEndRef = useRef(null);
     const plusMenuRef = useRef(null);
     const moreMenuRef = useRef(null);
+    const emojiPickerRef = useRef(null);
 
     const showMessageContextMenu = (event, messageId) => { event.preventDefault(); event.stopPropagation(); const { clientX: x, clientY: y } = event; setMessageMenu({ x, y, messageId }); };
     const closeMessageContextMenu = () => setMessageMenu(null);
@@ -55,16 +58,18 @@ const KomunitasPage = () => {
     const showChatContextMenu = (event, chat) => { setChatMenu({ x: event.clientX, y: event.clientY, chat: chat }); };
     const closeChatContextMenu = useCallback(() => setChatMenu(null), []);
     const handleChatMenuAction = (action, chatId) => { console.log(`Aksi: "${action}" pada chat ID: ${chatId}`); closeChatContextMenu(); };
-    useEffect(() => { const handleClickOutside = (event) => { if (plusMenuRef.current && !plusMenuRef.current.contains(event.target)) setIsPlusMenuOpen(false); if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) setIsMoreMenuOpen(false); }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
+    useEffect(() => { const handleClickOutside = (event) => { if (plusMenuRef.current && !plusMenuRef.current.contains(event.target)) setIsPlusMenuOpen(false); if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) setIsMoreMenuOpen(false); if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) { setEmojiPickerOpen(false); } }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
     useEffect(() => { setMessages([]); setIsInfoPanelOpen(false); setTimeout(() => { setMessages(dummyMessages[activeChat.id] || []); if(activeChat.id === 1) { setIsTyping(true); setTimeout(() => { setIsTyping(false); setMessages(prev => [...prev, {id: 'sim', text: 'Oke, ditunggu ya infonya!', sender: 'other', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]) }, 2500); } }, 300); }, [activeChat]);
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isTyping]);
-    const handleSendMessage = (e) => { e.preventDefault(); if (newMessage.trim() === '') return; const newMsg = { id: Date.now().toString(), text: newMessage, sender: 'me', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }; setMessages([...messages, newMsg]); setNewMessage(''); };
+    useEffect(() => { const handleKeyDown = (e) => { if (e.ctrlKey && e.key === 'e') { e.preventDefault(); setEmojiPickerOpen(prev => !prev); } }; document.addEventListener('keydown', handleKeyDown); return () => { document.removeEventListener('keydown', handleKeyDown); }; }, []);
+    const handleSendMessage = (e) => { e.preventDefault(); if (newMessage.trim() === '') return; const newMsg = { id: Date.now().toString(), text: newMessage, sender: 'me', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }; setMessages([...messages, newMsg]); setNewMessage(''); setEmojiPickerOpen(false); };
     const filteredContacts = dummyContacts.filter(c => { if(activeFilter === 'Grup') return c.isGroup; if(activeFilter === 'Belum Dibaca') return c.unread > 0; return true; });
     const handleAvatarClick = (event, user) => { event.stopPropagation(); setViewedProfile(user); };
+    const onEmojiClick = (emojiObject) => { setNewMessage(prevInput => prevInput + emojiObject.emoji); };
 
     return (
         <>
-            <style>{`.custom-scrollbar::-webkit-scrollbar{width:6px}.custom-scrollbar::-webkit-scrollbar-track{background:transparent}.custom-scrollbar::-webkit-scrollbar-thumb{background-color:#cbd5e1;border-radius:20px}.custom-scrollbar:hover::-webkit-scrollbar-thumb{background-color:#94a3b8}.input-chat:focus-within{box-shadow:0 0 0 2px #3b82f6}.custom-scrollbar-horizontal::-webkit-scrollbar{height:6px}.custom-scrollbar-horizontal::-webkit-scrollbar-track{background:transparent}.custom-scrollbar-horizontal::-webkit-scrollbar-thumb{background-color:#e2e8f0;border-radius:20px}.custom-scrollbar-horizontal:hover::-webkit-scrollbar-thumb{background-color:#cbd5e1}`}</style>
+            <style>{`.EmojiPickerReact .epr-body::-webkit-scrollbar { width: 8px; } .EmojiPickerReact .epr-body::-webkit-scrollbar-track { background: #f1f5f9; } .EmojiPickerReact .epr-body::-webkit-scrollbar-thumb { background-color: #93c5fd; border-radius: 20px; border: 2px solid #f1f5f9; } .EmojiPickerReact .epr-body::-webkit-scrollbar-thumb:hover { background-color: #60a5fa; }`}</style>
             
             <AnimatePresence>
                 {messageMenu && <MessageActionMenu position={messageMenu} onClose={closeMessageContextMenu} onAction={handleMessageMenuAction} availableEmojis={availableEmojis} />}
@@ -83,49 +88,57 @@ const KomunitasPage = () => {
                 </aside>
 
                 <main className="flex-1 bg-slate-100 flex flex-col min-w-0">
-                    {activeChat ? (
-                        <>
-                            <div className="flex-shrink-0 flex items-center p-4 border-b bg-white/70 backdrop-blur-sm shadow-sm z-10">
-                                <div 
-                                    className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
-                                    onClick={() => setViewedProfile(activeChat)}
-                                >
-                                    <Avatar contact={activeChat} size="lg" />
-                                    <div className="flex-1 min-w-0">
-                                        <h2 className="text-lg font-bold text-gray-900 truncate">
-                                            {activeChat.name}
-                                        </h2>
-                                        <p className="text-sm text-green-500">
-                                            {activeChat.online ? 'Online' : (activeChat.isGroup ? `${activeChat.members} anggota` : 'Offline')}
-                                        </p>
-                                    </div>
-                                </div>
-                                {/* --- [MODIFIKASI] Tombol Info dihapus, Call & Video dikembalikan --- */}
-                                <div className="ml-auto flex items-center space-x-2">
-                                    <button className="p-2 rounded-full hover:bg-gray-200 text-gray-500">
-                                        <FiPhone />
+                    {activeChat ? ( <> <div className="flex-shrink-0 flex items-center p-4 border-b bg-white/70 backdrop-blur-sm shadow-sm z-10"> <div className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer" onClick={() => setViewedProfile(activeChat)} > <Avatar contact={activeChat} size="lg" /> <div className="flex-1 min-w-0"> <h2 className="text-lg font-bold text-gray-900 truncate"> {activeChat.name} </h2> <p className="text-sm text-green-500"> {activeChat.online ? 'Online' : (activeChat.isGroup ? `${activeChat.members} anggota` : 'Offline')} </p> </div> </div> <div className="ml-auto flex items-center space-x-2"> <button className="p-2 rounded-full hover:bg-gray-200 text-gray-500"> <FiPhone /> </button> <button className="p-2 rounded-full hover:bg-gray-200 text-gray-500"> <FiVideo /> </button> </div> </div>
+                    <motion.div variants={listContainerVariants} initial="hidden" animate="visible" className="flex-1 overflow-y-auto p-6 space-y-2 custom-scrollbar"> <AnimatePresence> {messages.map(msg => msg.type === 'date' ? <DateSeparator key={msg.id} text={msg.text}/> : <MessageBubble key={msg.id} msg={msg} onContextMenu={showMessageContextMenu} /> )} </AnimatePresence> {isTyping && <TypingIndicator/>} <div ref={messagesEndRef} /> </motion.div>
+                    <div className="flex-shrink-0 p-4 bg-white mt-auto" ref={emojiPickerRef}>
+                        <div className="relative">
+                            <AnimatePresence>
+                                {isEmojiPickerOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                                        // --- [MODIFIKASI] Posisi diubah ke kiri ---
+                                        className="absolute bottom-full left-0 mb-2 z-20"
+                                    >
+                                        <EmojiPicker onEmojiClick={onEmojiClick} />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                            <form onSubmit={handleSendMessage} className="flex items-center space-x-3 bg-gray-100 rounded-full p-2 transition-shadow duration-300 input-chat">
+                                {/* --- [MODIFIKASI] Posisi tombol diubah --- */}
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setEmojiPickerOpen(!isEmojiPickerOpen)}
+                                        onMouseEnter={() => setShowEmojiTooltip(true)}
+                                        onMouseLeave={() => setShowEmojiTooltip(false)}
+                                        className="p-2 rounded-full hover:bg-gray-200 text-gray-500"
+                                    >
+                                        <FiSmile size={22}/>
                                     </button>
-                                    <button className="p-2 rounded-full hover:bg-gray-200 text-gray-500">
-                                        <FiVideo />
-                                    </button>
-                                </div>
-                            </div>
-                            <motion.div variants={listContainerVariants} initial="hidden" animate="visible" className="flex-1 overflow-y-auto p-6 space-y-2 custom-scrollbar"> 
-                                <AnimatePresence>
-                                    {messages.map(msg => 
-                                        msg.type === 'date' 
-                                        ? <DateSeparator key={msg.id} text={msg.text}/> 
-                                        : <MessageBubble key={msg.id} msg={msg} onContextMenu={showMessageContextMenu} />
+                                    <AnimatePresence>
+                                    {showEmojiTooltip && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 5 }}
+                                            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs font-semibold rounded-md whitespace-nowrap"
+                                        >
+                                            Emoji (Ctrl+E)
+                                        </motion.div>
                                     )}
-                                </AnimatePresence>
-                                {isTyping && <TypingIndicator/>}
-                                <div ref={messagesEndRef} />
-                            </motion.div>
-                            <div className="flex-shrink-0 p-4 bg-white mt-auto"> <form onSubmit={handleSendMessage} className="flex items-center space-x-3 bg-gray-100 rounded-full p-2 transition-shadow duration-300 input-chat"> <button type="button" className="p-2 rounded-full hover:bg-gray-200 text-gray-500"><FiSmile size={22}/></button> <button type="button" className="p-2 rounded-full hover:bg-gray-200 text-gray-500"><FiPaperclip size={22}/></button> <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Ketik pesan di sini..." className="flex-1 px-2 py-2 bg-transparent focus:outline-none" /> <motion.button whileTap={{ scale: 0.9 }} whileHover={{scale: 1.1}} type="submit" className="p-3 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-colors"><FiSend size={20}/></motion.button> </form> </div>
-                        </>
-                    ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500"><FiMessageSquare size={64} /><h2 className="text-2xl font-semibold mt-4">Pilih Obrolan</h2><p>Mulai percakapan dengan memilih kontak dari daftar.</p></div>
-                    )}
+                                    </AnimatePresence>
+                                </div>
+                                <button type="button" className="p-2 rounded-full hover:bg-gray-200 text-gray-500"><FiPaperclip size={22}/></button>
+                                {/* --- AKHIR MODIFIKASI --- */}
+                                <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Ketik pesan di sini..." className="flex-1 px-2 py-2 bg-transparent focus:outline-none" />
+                                <motion.button whileTap={{ scale: 0.9 }} whileHover={{scale: 1.1}} type="submit" className="p-3 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-colors"><FiSend size={20}/></motion.button>
+                            </form>
+                        </div>
+                    </div>
+                    </> ) : ( <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500"><FiMessageSquare size={64} /><h2 className="text-2xl font-semibold mt-4">Pilih Obrolan</h2><p>Mulai percakapan dengan memilih kontak dari daftar.</p></div> )}
                 </main>
                 
                 <AnimatePresence>
