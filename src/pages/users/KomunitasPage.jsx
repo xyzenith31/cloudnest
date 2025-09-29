@@ -5,7 +5,7 @@ import {
     FiSearch, FiMessageSquare, FiPlus, FiSend, FiSmile, FiPaperclip, FiMoreVertical, 
     FiPhone, FiVideo, FiUserPlus, FiUsers, FiRadio, FiBookmark, FiSettings, 
     FiArchive, FiBellOff, FiUser, FiThumbsUp, FiImage, FiFileText, FiLink, FiChevronDown, FiInfo,
-    FiCornerUpLeft, FiCopy, FiShare, FiStar, FiTrash2, FiCheckSquare
+    FiCornerUpLeft, FiCopy, FiShare, FiStar, FiTrash2, FiCheckSquare, FiEdit
 } from 'react-icons/fi';
 
 // --- FUNGSI & DATA DUMMY (Tidak Berubah) ---
@@ -69,6 +69,7 @@ const MessageActionMenu = ({ position, onClose, onAction, availableEmojis }) => 
         { icon: FiShare, text: 'Teruskan', action: 'forward' },
         { icon: FiStar, text: 'Tandai', action: 'star' },
         { icon: FiCheckSquare, text: 'Pilih', action: 'select' },
+        { icon: FiEdit, text: 'Edit', action: 'edit' },
         { icon: FiTrash2, text: 'Hapus', action: 'delete', isDanger: true },
     ];
     
