@@ -8,8 +8,8 @@ import CustomSelect from '../components/CustomSelect';
 import Notification from '../components/Notification';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { registerUserApi } from '../services/authService';
+import { useAuth } from '../context/AuthContext'; // <-- [BARU] Import useAuth
 
-// [PERBAIKAN] Opsi gender diubah ke Bahasa Indonesia
 const genderOptions = [
   { id: 0, name: 'Pilih Gender', value: '' },
   { id: 1, name: 'Laki-laki', value: 'Male' },
@@ -19,6 +19,7 @@ const genderOptions = [
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth(); // <-- [BARU] Panggil fungsi login dari context
   const [formData, setFormData] = useState({
     username: '',
     fullName: '',
@@ -59,10 +60,20 @@ const RegisterPage = () => {
     try {
         const userData = { ...formData, gender: selectedGender.value };
         
-        await registerUserApi(userData);
+        // Panggil API registrasi
+        const response = await registerUserApi(userData);
+        const registeredUser = response.data;
         
-        setNotification({ message: 'Registrasi berhasil! Anda akan diarahkan ke halaman login.', type: 'success' });
-        setTimeout(() => navigate('/'), 2000);
+        // --- [PERUBAHAN] Otomatis login dan redirect ---
+        login(registeredUser); // Simpan data user ke context & localStorage
+
+        setNotification({ message: 'Registrasi berhasil! Selamat datang.', type: 'success' });
+        
+        setTimeout(() => {
+          // Arahkan langsung ke dasbor pengguna
+          navigate('/beranda'); 
+        }, 1500);
+        // --- Akhir Perubahan ---
 
     } catch (error) {
         const errorMessage = error.response?.data?.message || 'Registrasi gagal. Coba lagi nanti.';
