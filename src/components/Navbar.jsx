@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-// [PERBAIKAN] Menambahkan kembali FiUploadCloud
-import { FiHome, FiFile, FiUploadCloud, FiUsers, FiHelpCircle, FiBell, FiMenu, FiX, FiActivity } from 'react-icons/fi'; 
+import { FiHome, FiFile, FiUploadCloud, FiUsers, FiHelpCircle, FiBell, FiMenu, FiX, FiActivity } from 'react-icons/fi';
 import { FaCloud, FaRocket } from 'react-icons/fa';
 import './css/Navbar.css';
 import NotificationDropdown from './NotificationDropdown';
 import ProfileDropdown from './ProfileDropdown';
 import { useAuth } from '../context/AuthContext';
 import { useUpload } from '../context/UploadContext';
+import { getUserFiles } from '../services/fileService'; // <-- IMPORT BARU
 
 const useClickOutside = (ref, handler) => {
   useEffect(() => {
@@ -37,7 +37,6 @@ const getInitials = (name) => {
   return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
-// [PERBAIKAN] Menambahkan kembali data link untuk tombol Upload File
 const navLinksData = [
     { text: 'Beranda', to: '/beranda', icon: FiHome },
     { text: 'File Saya', to: '/beranda/my-files', icon: FiFile },
@@ -82,8 +81,27 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [sliderPosition, setSliderPosition] = useState({ left: 0, width: 0 });
   
+  // --- [BARU] State untuk menyimpan informasi penyimpanan ---
+  const [storageInfo, setStorageInfo] = useState({ used: 0, total: 10 * 1024 * 1024 * 1024 }); // Total 10 GB
+
   const navRef = useRef(null);
   const location = useLocation();
+  
+  // --- [BARU] useEffect untuk mengambil data file ---
+  useEffect(() => {
+    const fetchStorageData = async () => {
+      try {
+        const response = await getUserFiles();
+        setStorageInfo(prev => ({ ...prev, used: response.data.totalSize }));
+      } catch (error) {
+        console.error("Gagal memuat data penyimpanan untuk navbar:", error);
+      }
+    };
+
+    if (user) {
+      fetchStorageData();
+    }
+  }, [user, location]); // Jalankan setiap kali user berubah atau lokasi berubah (untuk update)
 
   useEffect(() => {
     const activeLink = navRef.current?.querySelector('.nav-link-modern.active:not(.mobile)');
@@ -192,7 +210,7 @@ const Navbar = () => {
               <span className="profile-name-modern hidden md:block">{displayUsername}</span>
             </motion.button>
             <AnimatePresence>
-              {isProfileOpen && <ProfileDropdown userName={userFullName} userEmail={userEmail} />}
+              {isProfileOpen && <ProfileDropdown userName={userFullName} userEmail={userEmail} storageInfo={storageInfo} />}
             </AnimatePresence>
           </div>
           <div className="lg:hidden">

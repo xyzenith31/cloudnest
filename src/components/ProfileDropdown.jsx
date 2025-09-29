@@ -18,7 +18,17 @@ const getInitials = (name) => {
   return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
-const ProfileDropdown = ({ userName, userEmail }) => {
+// --- [BARU] Fungsi helper untuk format byte ---
+const formatBytes = (bytes, decimals = 2) => {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+};
+
+const ProfileDropdown = ({ userName, userEmail, storageInfo }) => {
     const { logout } = useAuth();
     const navigate = useNavigate();
 
@@ -27,13 +37,15 @@ const ProfileDropdown = ({ userName, userEmail }) => {
       navigate('/');
     };
 
+    // [DIUBAH] Menggunakan data dinamis dari props
     const storage = {
-        used: '7.2 GB',
-        total: '10 GB',
-        percentage: (7.2 / 10) * 100,
+        used: storageInfo.used,
+        total: storageInfo.total,
+        percentage: (storageInfo.used / storageInfo.total) * 100,
     };
 
     const userInitials = getInitials(userName);
+    const totalStorageFormatted = formatBytes(storage.total, 0);
 
     return (
         <motion.div
@@ -62,7 +74,7 @@ const ProfileDropdown = ({ userName, userEmail }) => {
                         <span className="flex items-center text-sm font-medium text-gray-700">
                             <FiHardDrive className="mr-2" /> Penyimpanan
                         </span>
-                        <span className="text-xs font-semibold text-gray-500">{storage.used} / {storage.total}</span>
+                        <span className="text-xs font-semibold text-gray-500">{formatBytes(storage.used)} / {totalStorageFormatted}</span>
                     </div>
                     <div className="storage-bar">
                         <motion.div 
@@ -76,7 +88,6 @@ const ProfileDropdown = ({ userName, userEmail }) => {
             </div>
 
             <div className="profile-links-new">
-                {/* [DIPERBAIKI] Pastikan link ini mengarah ke rute profil user */}
                 <NavLink to="/beranda/profile" className="profile-item-new">
                     <FiUser /><span>Profil Saya</span>
                 </NavLink>
