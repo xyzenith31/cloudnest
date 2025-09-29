@@ -6,16 +6,27 @@ import Navbar from '../components/Navbar';
 const UserLayout = () => {
   const location = useLocation();
 
+  // --- [LOGIKA KUNCI] ---
+  // Cek apakah path URL saat ini adalah halaman komunitas
+  const isCommunityPage = location.pathname === '/beranda/community';
+
+  // Tentukan kelas CSS secara kondisional berdasarkan halaman yang aktif
+  const mainContainerClasses = isCommunityPage
+    ? "flex-1 overflow-hidden" // Gaya khusus untuk halaman komunitas (tanpa padding, tanpa scroll)
+    : "flex-1 overflow-y-auto p-4 md:p-8"; // Gaya default untuk halaman lainnya
+
+  const motionDivClasses = isCommunityPage ? "h-full" : ""; // Tambahkan h-full hanya untuk komunitas
+
   return (
-    // [PERBAIKAN] Mengembalikan struktur layout utama agar tidak merusak halaman lain
     <div className="bg-gray-50 h-screen flex flex-col overflow-hidden">
       <Navbar />
-      {/* [PERBAIKAN KUNCI] `overflow-y-auto` dikembalikan agar halaman lain bisa scroll.
-          Halaman MyFilesPage akan menimpa perilaku ini secara internal. */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+      
+      {/* Container <main> sekarang menggunakan kelas dinamis */}
+      <main className={mainContainerClasses}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
+            className={motionDivClasses} // Div ini juga menggunakan kelas dinamis
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 15 }}

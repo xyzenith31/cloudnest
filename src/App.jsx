@@ -14,13 +14,12 @@ import AdminBeranda from './pages/admin/AdminDashboard.jsx';
 import ManajemenPengguna from './pages/admin/ManajemenPengguna.jsx';
 import ProfileAdmin from './pages/admin/ProfileAdmin.jsx';
 import QuickUploadPopup from './components/QuickUploadPopup.jsx';
+import KomunitasPage from './pages/users/KomunitasPage.jsx'; // <-- IMPORT BARU
 
 // Placeholder components
 const ManageFiles = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Manajemen File</h1></div>;
-const CommunityPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Komunitas</h1></div>;
 const LogsPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Log Aktivitas</h1></div>;
 const HelpPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Bantuan</h1></div>;
-// [BARU] Placeholder untuk halaman Riwayat Aktivitas
 const HistoryPage = () => <div className="p-4"><h1 className="text-2xl font-bold">Halaman Riwayat Aktivitas</h1></div>;
 
 function App() {
@@ -39,8 +38,7 @@ function App() {
             <Route index element={<UserBeranda />} />
             <Route path="my-files" element={<MyFilesPage />} />
             <Route path="upload" element={<UploadPage />} />
-            <Route path="community" element={<CommunityPage />} />
-            {/* [BARU] Rute untuk halaman Riwayat Aktivitas */}
+            <Route path="community" element={<KomunitasPage />} /> {/* <-- MODIFIKASI */}
             <Route path="history" element={<HistoryPage />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="profile" element={<ProfileUser />} />
@@ -53,7 +51,7 @@ function App() {
             <Route path="dashboard" element={<AdminBeranda />} />
             <Route path="manage-users" element={<ManajemenPengguna />} />
             <Route path="manage-files" element={<ManageFiles />} />
-            <Route path="community" element={<CommunityPage />} />
+            <Route path="community" element={<KomunitasPage />} /> {/* <-- MODIFIKASI */}
             <Route path="logs" element={<LogsPage />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="profile" element={<ProfileAdmin />} />
